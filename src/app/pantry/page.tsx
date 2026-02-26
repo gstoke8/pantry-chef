@@ -44,16 +44,26 @@ export default function PantryPage() {
   }, [name]);
 
   async function fetchItems() {
-    const { data, error } = await supabase
-      .from('pantry_items')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('name', { ascending: true });
+    setLoading(true);
+    console.log('Fetching pantry items...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('pantry_items')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('name', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching items:', error);
-    } else {
-      setItems(data || []);
+      if (error) {
+        console.error('Error fetching items:', error);
+        alert(`Database error: ${error.message}. Please check your Supabase connection.`);
+      } else {
+        console.log('Fetched', data?.length || 0, 'pantry items');
+        setItems(data || []);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      alert(`Connection error: ${(err as Error).message}`);
     }
     setLoading(false);
   }
@@ -61,20 +71,26 @@ export default function PantryPage() {
   async function addItem(e: React.FormEvent) {
     e.preventDefault();
     
-    const { error } = await supabase
-      .from('pantry_items')
-      .insert([{ name, category, quantity, unit }]);
+    try {
+      const { error } = await supabase
+        .from('pantry_items')
+        .insert([{ name, category, quantity, unit }]);
 
-    if (error) {
-      console.error('Error adding item:', error);
-    } else {
-      setName('');
-      setQuantity(1);
-      setUnit('item');
-      setCategory('other');
-      setAutoDetected(false);
-      setShowAddForm(false);
-      fetchItems();
+      if (error) {
+        console.error('Error adding item:', error);
+        alert(`Error adding item: ${error.message}`);
+      } else {
+        setName('');
+        setQuantity(1);
+        setUnit('item');
+        setCategory('other');
+        setAutoDetected(false);
+        setShowAddForm(false);
+        fetchItems();
+      }
+    } catch (err) {
+      console.error('Unexpected error adding item:', err);
+      alert(`Error: ${(err as Error).message}`);
     }
   }
 
