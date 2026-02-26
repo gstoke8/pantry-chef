@@ -12,6 +12,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'fallback'>('checking');
 
   useEffect(() => {
     fetchPantryItems();
@@ -164,12 +165,20 @@ export default function RecipesPage() {
 
   async function findRecipes(items: PantryItem[]) {
     setLoading(true);
+    setApiStatus('checking');
     try {
       const ingredientNames = items.map(item => item.name);
       
       // Check if API keys are available
-      if (!process.env.NEXT_PUBLIC_EDAMAM_APP_ID || !process.env.NEXT_PUBLIC_EDAMAM_APP_KEY) {
+      const hasEdamamKeys = process.env.NEXT_PUBLIC_EDAMAM_APP_ID && process.env.NEXT_PUBLIC_EDAMAM_APP_KEY;
+      console.log('Edamam API check:', { 
+        hasAppId: !!process.env.NEXT_PUBLIC_EDAMAM_APP_ID, 
+        hasAppKey: !!process.env.NEXT_PUBLIC_EDAMAM_APP_KEY 
+      });
+      
+      if (!hasEdamamKeys) {
         console.log('Using sample recipes (Edamam API keys not configured)');
+        setApiStatus('fallback');
         // Filter sample recipes based on pantry items
         const filteredSamples = sampleRecipes.filter(recipe => 
           recipe.ingredients.some(ing => 
@@ -184,6 +193,8 @@ export default function RecipesPage() {
       }
       
       const edamamRecipes = await findRecipesByIngredients(ingredientNames, 12);
+      console.log('Edamam API returned', edamamRecipes.length, 'recipes');
+      setApiStatus('connected');
       
       // Convert Edamam recipes to our Recipe format
       const convertedRecipes: Recipe[] = edamamRecipes.map((hit: EdamamRecipe) => ({
@@ -219,6 +230,7 @@ export default function RecipesPage() {
       setRecipes(convertedRecipes);
     } catch (error) {
       console.error('Error finding recipes:', error);
+      setApiStatus('fallback');
       // Fallback to sample recipes on error
       setRecipes(sampleRecipes);
     } finally {
@@ -238,23 +250,60 @@ export default function RecipesPage() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Recipe Finder</h1>
-        <p className="text-sm sm:text-base text-gray-600">
-          {pantryItems.length > 0 
-            ? `Found recipes using your ${pantryItems.length} pantry ingredients`
-            : 'Add ingredients to your pantry to get personalized recipe suggestions'}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Recipe Finder</h1>
+            <p className="text-sm sm:text-base text-gray-600">
+              {pantryItems.length > 0 
+                ? `Found recipes using your ${pantryItems.length} pantry ingredients`
+                : 'Add ingredients to your pantry to get personalized recipe suggestions'}
+            </p>
+          </div>
+          {pantryItems.length > 0 && (
+            <button
+              onClick={() => findRecipes(pantryItems)}
+              disabled={loading}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium flex items-center space-x-1 flex-shrink-0"
+            >
+              <span>Refresh</span>
+              {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+            </button>
+          )}
+        </div>
+        
+        {/* API Status Indicator */}
+        <div className="mt-2 flex items-center space-x-2">
+          <span className="text-xs text-gray-500">API:</span>
+          {apiStatus === 'checking' && (
+            <span className="text-xs text-gray-500 flex items-center">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              Checking...
+            </span>
+          )}
+          {apiStatus === 'connected' && (
+            <span className="text-xs text-emerald-600 font-medium flex items-center">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
+              Edamam API
+            </span>
+          )}
+          {apiStatus === 'fallback' && (
+            <span className="text-xs text-amber-600 font-medium flex items-center">
+              <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
+              Sample recipes (API keys not configured)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Search */}
       <div className="relative mb-4 sm:mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
         <input
           type="text"
           placeholder="Search recipes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
+          className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 placeholder-gray-500 text-base"
         />
       </div>
 
