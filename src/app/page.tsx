@@ -13,6 +13,7 @@ export default function RecipesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'fallback'>('checking');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPantryItems();
@@ -173,40 +174,37 @@ export default function RecipesPage() {
   async function findRecipes(items: PantryItem[]) {
     setLoading(true);
     setApiStatus('checking');
+    setErrorMessage(null);
+    
     try {
       const ingredientNames = items.map(item => item.name);
       
       // Call our server-side API route
       const response = await fetch(`/api/recipes?ingredients=${encodeURIComponent(ingredientNames.join(','))}&number=12`);
       
+      const data = await response.json();
+      console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error });
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error:', errorData);
+        console.error('API error:', data);
+        setErrorMessage(`API Error: ${data.error || 'Unknown error'}`);
         
-        if (response.status === 503 && errorData.error?.includes('not configured')) {
+        if (response.status === 503 && data.error?.includes('not configured')) {
           setApiStatus('fallback');
-          // Filter sample recipes based on pantry items
-          const filteredSamples = sampleRecipes.filter(recipe => 
-            recipe.ingredients.some(ing => 
-              items.some(pantryItem => 
-                pantryItem.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-                ing.name.toLowerCase().includes(pantryItem.name.toLowerCase())
-              )
-            )
-          );
-          setRecipes(filteredSamples.length > 0 ? filteredSamples : sampleRecipes);
+          setRecipes(sampleRecipes);
           return;
         }
         
-        throw new Error(errorData.error || 'Failed to fetch recipes');
+        // For other errors, still show sample recipes
+        setApiStatus('fallback');
+        setRecipes(sampleRecipes);
+        return;
       }
-      
-      const data = await response.json();
-      console.log('API returned', data.recipes?.length, 'recipes from', data.source);
       
       // If API returns no recipes, fall back to sample recipes
       if (!data.recipes || data.recipes.length === 0) {
         console.log('No recipes returned from API, using samples');
+        setErrorMessage('No recipes found for your ingredients. Showing sample recipes.');
         setApiStatus('fallback');
         setRecipes(sampleRecipes);
         return;
@@ -236,12 +234,18 @@ export default function RecipesPage() {
       setRecipes(convertedRecipes);
     } catch (error) {
       console.error('Error finding recipes:', error);
+      setErrorMessage(`Error: ${(error as Error).message}. Showing sample recipes.`);
       setApiStatus('fallback');
-      // Fallback to sample recipes on error
       setRecipes(sampleRecipes);
     } finally {
       setLoading(false);
     }
+  }
+
+  function loadSampleRecipes() {
+    setRecipes(sampleRecipes);
+    setApiStatus('fallback');
+    setErrorMessage(null);
   }
 
   async function toggleFavorite(recipeId: string) {
@@ -295,10 +299,29 @@ export default function RecipesPage() {
           {apiStatus === 'fallback' && (
             <span className="text-xs text-amber-600 font-medium flex items-center">
               <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
-              Sample recipes (API keys not configured)
+              Sample recipes
             </span>
           )}
         </div>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{errorMessage}</p>
+          </div>
+        )}
+
+        {/* Manual Sample Recipes Button */}
+        {recipes.length === 0 && !loading && (
+          <div className="mt-3">
+            <button
+              onClick={loadSampleRecipes}
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+            >
+              Load sample recipes →
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Search */}
