@@ -25,10 +25,17 @@ export default function RecipesPage() {
 
     if (error) {
       console.error('Error fetching pantry items:', error);
+      // Show sample recipes on error
+      setRecipes(sampleRecipes);
+      setApiStatus('fallback');
     } else {
       setPantryItems(data || []);
       if (data && data.length > 0) {
         findRecipes(data);
+      } else {
+        // Show sample recipes if pantry is empty
+        setRecipes(sampleRecipes);
+        setApiStatus('fallback');
       }
     }
   }
@@ -196,6 +203,15 @@ export default function RecipesPage() {
       
       const data = await response.json();
       console.log('API returned', data.recipes?.length, 'recipes from', data.source);
+      
+      // If API returns no recipes, fall back to sample recipes
+      if (!data.recipes || data.recipes.length === 0) {
+        console.log('No recipes returned from API, using samples');
+        setApiStatus('fallback');
+        setRecipes(sampleRecipes);
+        return;
+      }
+      
       setApiStatus('connected');
       
       // Convert API recipes to our Recipe format
