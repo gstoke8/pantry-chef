@@ -15,8 +15,6 @@ export async function GET(request: NextRequest) {
     ingredients: ingredients?.substring(0, 50),
     hasAppId: !!EDAMAM_APP_ID,
     hasAppKey: !!EDAMAM_APP_KEY,
-    appIdLength: EDAMAM_APP_ID.length,
-    appKeyLength: EDAMAM_APP_KEY.length,
   });
 
   if (!ingredients) {
@@ -28,21 +26,13 @@ export async function GET(request: NextRequest) {
 
   // Check if API keys are configured
   if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY) {
-    console.error('API keys not configured:', { 
-      hasAppId: !!EDAMAM_APP_ID, 
-      hasAppKey: !!EDAMAM_APP_KEY,
-      appIdFirst4: EDAMAM_APP_ID?.substring(0, 4) || 'none',
-    });
+    console.error('API keys not configured');
     return NextResponse.json(
       { 
         error: 'Edamam API keys not configured',
         debug: {
           hasAppId: !!EDAMAM_APP_ID,
           hasAppKey: !!EDAMAM_APP_KEY,
-          appIdLength: EDAMAM_APP_ID.length,
-          appKeyLength: EDAMAM_APP_KEY.length,
-          nodeEnv: process.env.NODE_ENV,
-          vercelEnv: process.env.VERCEL_ENV,
         }
       },
       { status: 503 }
@@ -63,9 +53,14 @@ export async function GET(request: NextRequest) {
     });
 
     const apiUrl = `${EDAMAM_BASE_URL}?${params}`;
-    console.log('Fetching from Edamam:', apiUrl.replace(EDAMAM_APP_KEY, '***'));
+    console.log('Fetching from Edamam...');
 
-    const response = await fetch(apiUrl);
+    const response = await fetch(apiUrl, {
+      headers: {
+        // Edamam now requires this header for new apps
+        'Edamam-Account-User': 'pantry-chef-user',
+      },
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
