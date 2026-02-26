@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PantryItem, Recipe } from '@/lib/types';
-import { findRecipesByIngredients, EdamamRecipe } from '@/lib/api';
 import { Search, ChefHat, Clock, Users, Heart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -169,60 +168,49 @@ export default function RecipesPage() {
     try {
       const ingredientNames = items.map(item => item.name);
       
-      // Check if API keys are available
-      const hasEdamamKeys = process.env.NEXT_PUBLIC_EDAMAM_APP_ID && process.env.NEXT_PUBLIC_EDAMAM_APP_KEY;
-      console.log('Edamam API check:', { 
-        hasAppId: !!process.env.NEXT_PUBLIC_EDAMAM_APP_ID, 
-        hasAppKey: !!process.env.NEXT_PUBLIC_EDAMAM_APP_KEY 
-      });
+      // Call our server-side API route
+      const response = await fetch(`/api/recipes?ingredients=${encodeURIComponent(ingredientNames.join(','))}&number=12`);
       
-      if (!hasEdamamKeys) {
-        console.log('Using sample recipes (Edamam API keys not configured)');
-        setApiStatus('fallback');
-        // Filter sample recipes based on pantry items
-        const filteredSamples = sampleRecipes.filter(recipe => 
-          recipe.ingredients.some(ing => 
-            items.some(pantryItem => 
-              pantryItem.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-              ing.name.toLowerCase().includes(pantryItem.name.toLowerCase())
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error:', errorData);
+        
+        if (response.status === 503 && errorData.error?.includes('not configured')) {
+          setApiStatus('fallback');
+          // Filter sample recipes based on pantry items
+          const filteredSamples = sampleRecipes.filter(recipe => 
+            recipe.ingredients.some(ing => 
+              items.some(pantryItem => 
+                pantryItem.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+                ing.name.toLowerCase().includes(pantryItem.name.toLowerCase())
+              )
             )
-          )
-        );
-        setRecipes(filteredSamples.length > 0 ? filteredSamples : sampleRecipes);
-        return;
+          );
+          setRecipes(filteredSamples.length > 0 ? filteredSamples : sampleRecipes);
+          return;
+        }
+        
+        throw new Error(errorData.error || 'Failed to fetch recipes');
       }
       
-      const edamamRecipes = await findRecipesByIngredients(ingredientNames, 12);
-      console.log('Edamam API returned', edamamRecipes.length, 'recipes');
+      const data = await response.json();
+      console.log('API returned', data.recipes?.length, 'recipes from', data.source);
       setApiStatus('connected');
       
-      // Convert Edamam recipes to our Recipe format
-      const convertedRecipes: Recipe[] = edamamRecipes.map((hit: EdamamRecipe) => ({
-        id: hit.recipe.uri.split('#')[1] || Math.random().toString(),
+      // Convert API recipes to our Recipe format
+      const convertedRecipes: Recipe[] = data.recipes.map((recipe: any) => ({
+        id: recipe.id,
         user_id: null,
         spoonacular_id: null,
-        title: hit.recipe.label,
-        image: hit.recipe.image,
-        ingredients: hit.recipe.ingredients.map(ing => ({
-          name: ing.food,
-          amount: ing.quantity || 1,
-          unit: ing.measure || 'item',
-          original: ing.text,
-        })),
-        instructions: null, // Edamam doesn't provide instructions in free tier
-        nutrition: {
-          calories: hit.recipe.calories / hit.recipe.yield,
-          protein: (hit.recipe.totalNutrients.PROCNT?.quantity || 0) / hit.recipe.yield,
-          carbs: (hit.recipe.totalNutrients.CHOCDF?.quantity || 0) / hit.recipe.yield,
-          fat: (hit.recipe.totalNutrients.FAT?.quantity || 0) / hit.recipe.yield,
-          fiber: (hit.recipe.totalNutrients.FIBTG?.quantity || 0) / hit.recipe.yield,
-          sugar: (hit.recipe.totalNutrients.SUGAR?.quantity || 0) / hit.recipe.yield,
-          sodium: (hit.recipe.totalNutrients.NA?.quantity || 0) / hit.recipe.yield,
-        },
-        prep_time: hit.recipe.totalTime || null,
+        title: recipe.title,
+        image: recipe.image,
+        ingredients: recipe.ingredients,
+        instructions: null,
+        nutrition: recipe.nutrition,
+        prep_time: recipe.prep_time,
         cook_time: null,
-        servings: hit.recipe.yield,
-        source: 'edamam',
+        servings: recipe.servings,
+        source: recipe.source,
         is_favorite: false,
         created_at: new Date().toISOString(),
       }));
