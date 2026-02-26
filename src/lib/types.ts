@@ -37,6 +37,7 @@ export interface Recipe {
   spoonacular_id: number | null;
   title: string;
   image: string | null;
+  url: string | null; // Source URL for full recipe
   ingredients: RecipeIngredient[];
   instructions: string[] | null;
   nutrition: NutritionInfo | null;

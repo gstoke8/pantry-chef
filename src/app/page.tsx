@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PantryItem, Recipe } from '@/lib/types';
-import { Search, ChefHat, Clock, Users, Heart, Loader2 } from 'lucide-react';
+import { Search, ChefHat, Clock, Users, Heart, Loader2, X, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RecipesPage() {
@@ -12,6 +12,7 @@ export default function RecipesPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'fallback'>('checking');
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
     fetchPantryItems();
@@ -204,6 +205,7 @@ export default function RecipesPage() {
         spoonacular_id: null,
         title: recipe.title,
         image: recipe.image,
+        url: recipe.url || null,
         ingredients: recipe.ingredients,
         instructions: null,
         nutrition: recipe.nutrition,
@@ -403,7 +405,7 @@ export default function RecipesPage() {
                     </div>
                     <button
                       className="mt-3 sm:mt-4 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition-colors text-sm sm:text-base"
-                      onClick={() => alert('Recipe detail view coming soon!')}
+                      onClick={() => setSelectedRecipe(recipe)}
                     >
                       View Recipe
                     </button>
@@ -413,6 +415,131 @@ export default function RecipesPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Recipe Detail Modal */}
+      {selectedRecipe && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Modal Header with Image */}
+            <div className="relative">
+              {selectedRecipe.image ? (
+                <img
+                  src={selectedRecipe.image}
+                  alt={selectedRecipe.title}
+                  className="w-full h-48 sm:h-64 object-cover"
+                />
+              ) : (
+                <div className="w-full h-48 sm:h-64 bg-gray-200 flex items-center justify-center">
+                  <ChefHat className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
+              <button
+                onClick={() => setSelectedRecipe(null)}
+                className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 sm:p-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
+                {selectedRecipe.title}
+              </h2>
+
+              {/* Recipe Meta */}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-6">
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 mr-1" />
+                  {selectedRecipe.prep_time 
+                    ? `${selectedRecipe.prep_time} min`
+                    : 'Time varies'}
+                </div>
+                <div className="flex items-center">
+                  <Users className="h-4 w-4 mr-1" />
+                  {selectedRecipe.servings} servings
+                </div>
+                {selectedRecipe.nutrition && (
+                  <div className="text-gray-500">
+                    {Math.round(selectedRecipe.nutrition.calories)} cal/serving
+                  </div>
+                )}
+              </div>
+
+              {/* Ingredients Section */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingredients</h3>
+                <ul className="space-y-2">
+                  {selectedRecipe.ingredients.map((ing, idx) => (
+                    <li key={idx} className="flex items-start text-sm text-gray-700">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                      <span>
+                        {ing.original || `${ing.amount} ${ing.unit} ${ing.name}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Instructions Notice */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-amber-800">
+                  <strong>Cooking instructions</strong> are available on the source website.
+                  Click the button below to view the full recipe with step-by-step instructions.
+                </p>
+              </div>
+
+              {/* Nutrition Info (if available) */}
+              {selectedRecipe.nutrition && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Nutrition (per serving)</h3>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {Math.round(selectedRecipe.nutrition.protein)}g
+                      </div>
+                      <div className="text-xs text-gray-500">Protein</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {Math.round(selectedRecipe.nutrition.carbs)}g
+                      </div>
+                      <div className="text-xs text-gray-500">Carbs</div>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-lg font-semibold text-gray-900">
+                        {Math.round(selectedRecipe.nutrition.fat)}g
+                      </div>
+                      <div className="text-xs text-gray-500">Fat</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                {selectedRecipe.url && (
+                  <a
+                    href={selectedRecipe.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center space-x-2 bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+                  >
+                    <span>View Full Recipe</span>
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+                <button
+                  onClick={() => setSelectedRecipe(null)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

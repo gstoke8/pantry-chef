@@ -40,8 +40,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Build query from ingredients
-    const ingredientList = ingredients.split(',').slice(0, 5).join(' ');
+    // Build query from ingredients - use more ingredients for better results
+    const ingredientList = ingredients.split(',').slice(0, 8).join(' ');
+    
+    // Request more recipes to ensure we get a good variety
+    const requestedCount = Math.min(parseInt(number) || 12, 20);
     
     const params = new URLSearchParams({
       type: 'public',
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
       app_id: EDAMAM_APP_ID,
       app_key: EDAMAM_APP_KEY,
       from: '0',
-      to: number,
+      to: requestedCount.toString(),
     });
 
     const apiUrl = `${EDAMAM_BASE_URL}?${params}`;
@@ -83,6 +86,7 @@ export async function GET(request: NextRequest) {
       id: hit.recipe.uri.split('#')[1] || Math.random().toString(),
       title: hit.recipe.label,
       image: hit.recipe.image,
+      url: hit.recipe.url, // Source URL for full instructions
       ingredients: hit.recipe.ingredients.map((ing: any) => ({
         name: ing.food,
         amount: ing.quantity || 1,
