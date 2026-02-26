@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PantryItem, Recipe } from '@/lib/types';
-import { findRecipesByIngredients } from '@/lib/api';
+import { findRecipesByIngredients, EdamamRecipe } from '@/lib/api';
 import { Search, ChefHat, Clock, Users, Heart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -167,9 +167,9 @@ export default function RecipesPage() {
     try {
       const ingredientNames = items.map(item => item.name);
       
-      // Check if API key is available
-      if (!process.env.NEXT_PUBLIC_SPOONACULAR_API_KEY) {
-        console.log('Using sample recipes (API key not configured)');
+      // Check if API keys are available
+      if (!process.env.NEXT_PUBLIC_EDAMAM_APP_ID || !process.env.NEXT_PUBLIC_EDAMAM_APP_KEY) {
+        console.log('Using sample recipes (Edamam API keys not configured)');
         // Filter sample recipes based on pantry items
         const filteredSamples = sampleRecipes.filter(recipe => 
           recipe.ingredients.some(ing => 
@@ -183,27 +183,35 @@ export default function RecipesPage() {
         return;
       }
       
-      const spoonacularRecipes = await findRecipesByIngredients(ingredientNames, 12);
+      const edamamRecipes = await findRecipesByIngredients(ingredientNames, 12);
       
-      // Convert to our Recipe format
-      const convertedRecipes: Recipe[] = spoonacularRecipes.map(recipe => ({
-        id: recipe.id.toString(),
+      // Convert Edamam recipes to our Recipe format
+      const convertedRecipes: Recipe[] = edamamRecipes.map((hit: EdamamRecipe) => ({
+        id: hit.recipe.uri.split('#')[1] || Math.random().toString(),
         user_id: null,
-        spoonacular_id: recipe.id,
-        title: recipe.title,
-        image: recipe.image,
-        ingredients: recipe.usedIngredients.map(ing => ({
-          name: ing.name,
-          amount: ing.amount,
-          unit: ing.unit,
-          original: ing.original,
+        spoonacular_id: null,
+        title: hit.recipe.label,
+        image: hit.recipe.image,
+        ingredients: hit.recipe.ingredients.map(ing => ({
+          name: ing.food,
+          amount: ing.quantity || 1,
+          unit: ing.measure || 'item',
+          original: ing.text,
         })),
-        instructions: null,
-        nutrition: null,
-        prep_time: null,
+        instructions: null, // Edamam doesn't provide instructions in free tier
+        nutrition: {
+          calories: hit.recipe.calories / hit.recipe.yield,
+          protein: (hit.recipe.totalNutrients.PROCNT?.quantity || 0) / hit.recipe.yield,
+          carbs: (hit.recipe.totalNutrients.CHOCDF?.quantity || 0) / hit.recipe.yield,
+          fat: (hit.recipe.totalNutrients.FAT?.quantity || 0) / hit.recipe.yield,
+          fiber: (hit.recipe.totalNutrients.FIBTG?.quantity || 0) / hit.recipe.yield,
+          sugar: (hit.recipe.totalNutrients.SUGAR?.quantity || 0) / hit.recipe.yield,
+          sodium: (hit.recipe.totalNutrients.NA?.quantity || 0) / hit.recipe.yield,
+        },
+        prep_time: hit.recipe.totalTime || null,
         cook_time: null,
-        servings: 4,
-        source: 'spoonacular',
+        servings: hit.recipe.yield,
+        source: 'edamam',
         is_favorite: false,
         created_at: new Date().toISOString(),
       }));
@@ -228,10 +236,10 @@ export default function RecipesPage() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Recipe Finder</h1>
-        <p className="text-gray-600">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Recipe Finder</h1>
+        <p className="text-sm sm:text-base text-gray-600">
           {pantryItems.length > 0 
             ? `Found recipes using your ${pantryItems.length} pantry ingredients`
             : 'Add ingredients to your pantry to get personalized recipe suggestions'}
@@ -239,32 +247,32 @@ export default function RecipesPage() {
       </div>
 
       {/* Search */}
-      <div className="relative mb-6">
+      <div className="relative mb-4 sm:mb-6">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
         <input
           type="text"
           placeholder="Search recipes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full pl-10 pr-4 py-2.5 sm:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base"
         />
       </div>
 
       {/* Pantry Items Quick View */}
       {pantryItems.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {pantryItems.slice(0, 10).map((item) => (
+        <div className="mb-4 sm:mb-6">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {pantryItems.slice(0, 8).map((item) => (
               <span
                 key={item.id}
-                className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-sm"
+                className="px-2 sm:px-3 py-0.5 sm:py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs sm:text-sm"
               >
                 {item.name}
               </span>
             ))}
-            {pantryItems.length > 10 && (
-              <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-                +{pantryItems.length - 10} more
+            {pantryItems.length > 8 && (
+              <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-xs sm:text-sm">
+                +{pantryItems.length - 8} more
               </span>
             )}
           </div>
@@ -275,7 +283,7 @@ export default function RecipesPage() {
       {loading && (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-          <span className="ml-2 text-gray-600">Finding recipes...</span>
+          <span className="ml-2 text-gray-600 text-sm sm:text-base">Finding recipes...</span>
         </div>
       )}
 
@@ -283,23 +291,23 @@ export default function RecipesPage() {
       {!loading && (
         <>
           {filteredRecipes.length === 0 ? (
-            <div className="text-center py-12">
-              <ChefHat className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No recipes found</p>
-              <p className="text-gray-400 mt-1">
+            <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+              <ChefHat className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-base sm:text-lg">No recipes found</p>
+              <p className="text-gray-400 text-sm mt-1">
                 {pantryItems.length === 0 
                   ? 'Add ingredients to your pantry first'
                   : 'Try searching with different terms'}
               </p>
               <Link
                 href="/pantry"
-                className="inline-block mt-4 text-emerald-600 hover:text-emerald-700 font-medium"
+                className="inline-block mt-4 text-emerald-600 hover:text-emerald-700 font-medium text-sm sm:text-base"
               >
                 Go to Pantry →
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredRecipes.map((recipe) => (
                 <div
                   key={recipe.id}
@@ -311,53 +319,53 @@ export default function RecipesPage() {
                       <img
                         src={recipe.image}
                         alt={recipe.title}
-                        className="w-full h-48 object-cover"
+                        className="w-full h-40 sm:h-48 object-cover"
                       />
                     ) : (
-                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                        <ChefHat className="h-12 w-12 text-gray-400" />
+                      <div className="w-full h-40 sm:h-48 bg-gray-200 flex items-center justify-center">
+                        <ChefHat className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
                       </div>
                     )}
                     <button
                       onClick={() => toggleFavorite(recipe.id)}
-                      className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
+                      className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1.5 sm:p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
                     >
-                      <Heart className={`h-5 w-5 ${recipe.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                      <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${recipe.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                     </button>
                   </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                  <div className="p-3 sm:p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm sm:text-base">
                       {recipe.title}
                     </h3>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <div className="flex items-center space-x-3 sm:space-x-4 text-xs sm:text-sm text-gray-500">
                       <div className="flex items-center">
-                        <Clock className="h-4 w-4 mr-1" />
+                        <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                         {recipe.prep_time || recipe.cook_time 
                           ? `${(recipe.prep_time || 0) + (recipe.cook_time || 0)} min`
                           : '30 min'}
                       </div>
                       <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
+                        <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                         {recipe.servings} servings
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {recipe.ingredients.slice(0, 3).map((ing, idx) => (
+                    <div className="mt-2 sm:mt-3 flex flex-wrap gap-1">
+                      {recipe.ingredients.slice(0, 2).map((ing, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
+                          className="px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
                         >
                           {ing.name}
                         </span>
                       ))}
-                      {recipe.ingredients.length > 3 && (
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                          +{recipe.ingredients.length - 3}
+                      {recipe.ingredients.length > 2 && (
+                        <span className="px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                          +{recipe.ingredients.length - 2}
                         </span>
                       )}
                     </div>
                     <button
-                      className="mt-4 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition-colors"
+                      className="mt-3 sm:mt-4 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition-colors text-sm sm:text-base"
                       onClick={() => alert('Recipe detail view coming soon!')}
                     >
                       View Recipe

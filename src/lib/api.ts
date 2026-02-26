@@ -1,25 +1,60 @@
 import { SpoonacularRecipe, SpoonacularRecipeDetail, EdamamRecipe, Recipe } from './types';
 
-// Note: In a real app, these API calls should be made from a server-side API route
-// to protect API keys. For demo purposes, we're calling directly from the browser
-// with a public key (limited permissions) or using a proxy.
-const SPOONACULAR_API_KEY = process.env.NEXT_PUBLIC_SPOONACULAR_API_KEY || '';
-const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
-
-// Check if API key is configured
-if (!SPOONACULAR_API_KEY) {
-  console.warn('Spoonacular API key not configured. Recipes will not load.');
-}
-
-const EDAMAM_APP_ID = process.env.EDAMAM_APP_ID!;
-const EDAMAM_APP_KEY = process.env.EDAMAM_APP_KEY!;
+// Edamam API Configuration
+// Edamam allows client-side calls with app ID and key
+const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || '';
+const EDAMAM_APP_KEY = process.env.NEXT_PUBLIC_EDAMAM_APP_KEY || '';
 const EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 
-// Spoonacular API
+// Spoonacular API Configuration
+const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY || '';
+const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
+
+// Check if API keys are configured
+if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY) {
+  console.warn('Edamam API keys not configured. Using sample recipes.');
+}
+
+// Search recipes by ingredients using Edamam
 export async function findRecipesByIngredients(
   ingredients: string[],
   number: number = 10
+): Promise<EdamamRecipe[]> {
+  if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY) {
+    throw new Error('Edamam API keys not configured');
+  }
+
+  // Build query from ingredients
+  const query = ingredients.slice(0, 5).join(' '); // Use top 5 ingredients
+  
+  const params = new URLSearchParams({
+    type: 'public',
+    q: query,
+    app_id: EDAMAM_APP_ID,
+    app_key: EDAMAM_APP_KEY,
+    from: '0',
+    to: number.toString(),
+  });
+
+  const response = await fetch(`${EDAMAM_BASE_URL}?${params}`);
+
+  if (!response.ok) {
+    throw new Error(`Edamam API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.hits || [];
+}
+
+// Spoonacular API - Find recipes by ingredients
+export async function findRecipesByIngredientsSpoonacular(
+  ingredients: string[],
+  number: number = 10
 ): Promise<SpoonacularRecipe[]> {
+  if (!SPOONACULAR_API_KEY) {
+    throw new Error('Spoonacular API key not configured');
+  }
+
   const ingredientString = ingredients.join(',');
   
   const response = await fetch(
@@ -38,7 +73,12 @@ export async function findRecipesByIngredients(
   return response.json();
 }
 
+// Get detailed recipe information from Spoonacular
 export async function getRecipeDetails(id: number): Promise<SpoonacularRecipeDetail> {
+  if (!SPOONACULAR_API_KEY) {
+    throw new Error('Spoonacular API key not configured');
+  }
+
   const response = await fetch(
     `${SPOONACULAR_BASE_URL}/recipes/${id}/information?` +
     `includeNutrition=true&` +
@@ -52,12 +92,17 @@ export async function getRecipeDetails(id: number): Promise<SpoonacularRecipeDet
   return response.json();
 }
 
+// Search recipes with complex query
 export async function searchRecipes(
   query: string,
   diet?: string,
   intolerances?: string[],
   number: number = 10
 ) {
+  if (!SPOONACULAR_API_KEY) {
+    throw new Error('Spoonacular API key not configured');
+  }
+
   const params = new URLSearchParams({
     query,
     number: number.toString(),
@@ -74,45 +119,6 @@ export async function searchRecipes(
 
   if (!response.ok) {
     throw new Error(`Spoonacular API error: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-// Edamam API
-export async function searchEdamamRecipes(
-  query: string,
-  ingredients?: string[],
-  diet?: string[],
-  health?: string[],
-  from: number = 0,
-  to: number = 20
-): Promise<{ hits: EdamamRecipe[] }> {
-  const params = new URLSearchParams({
-    type: 'public',
-    q: query,
-    app_id: EDAMAM_APP_ID,
-    app_key: EDAMAM_APP_KEY,
-    from: from.toString(),
-    to: to.toString(),
-  });
-
-  if (ingredients) {
-    params.append('ingr', ingredients.length.toString());
-  }
-  
-  if (diet) {
-    diet.forEach(d => params.append('diet', d));
-  }
-  
-  if (health) {
-    health.forEach(h => params.append('health', h));
-  }
-
-  const response = await fetch(`${EDAMAM_BASE_URL}?${params}`);
-
-  if (!response.ok) {
-    throw new Error(`Edamam API error: ${response.status}`);
   }
 
   return response.json();

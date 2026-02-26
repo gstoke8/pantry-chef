@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   title: "Pantry Chef - Recipe & Meal Planner",
   description: "Find recipes based on your pantry ingredients and plan your meals",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#10b981",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
