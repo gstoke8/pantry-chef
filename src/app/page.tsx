@@ -33,10 +33,157 @@ export default function RecipesPage() {
     }
   }
 
+  // Sample recipes for demo when API is not configured
+  const sampleRecipes: Recipe[] = [
+    {
+      id: '1',
+      user_id: null,
+      spoonacular_id: 1,
+      title: 'Honey Garlic Chicken Stir-Fry',
+      image: 'https://spoonacular.com/recipeImages/716429-556x370.jpg',
+      ingredients: [
+        { name: 'chicken breast', amount: 1, unit: 'lb', original: '1 lb chicken breast' },
+        { name: 'garlic', amount: 4, unit: 'cloves', original: '4 cloves garlic' },
+        { name: 'honey', amount: 2, unit: 'tbsp', original: '2 tbsp honey' },
+        { name: 'soy sauce', amount: 2, unit: 'tbsp', original: '2 tbsp soy sauce' },
+      ],
+      instructions: null,
+      nutrition: { calories: 320, protein: 28, carbs: 18, fat: 12, fiber: 1, sugar: 14, sodium: 680 },
+      prep_time: 10,
+      cook_time: 15,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '2',
+      user_id: null,
+      spoonacular_id: 2,
+      title: 'Mediterranean Chickpea Salad',
+      image: 'https://spoonacular.com/recipeImages/782585-556x370.jpg',
+      ingredients: [
+        { name: 'chickpeas', amount: 1, unit: 'can', original: '1 can chickpeas' },
+        { name: 'cucumber', amount: 1, unit: 'item', original: '1 cucumber' },
+        { name: 'tomatoes', amount: 2, unit: 'item', original: '2 tomatoes' },
+        { name: 'olive oil', amount: 2, unit: 'tbsp', original: '2 tbsp olive oil' },
+      ],
+      instructions: null,
+      nutrition: { calories: 245, protein: 8, carbs: 32, fat: 10, fiber: 9, sugar: 6, sodium: 420 },
+      prep_time: 15,
+      cook_time: 0,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '3',
+      user_id: null,
+      spoonacular_id: 3,
+      title: 'One-Pan Chicken and Sweet Potatoes',
+      image: 'https://spoonacular.com/recipeImages/715538-556x370.jpg',
+      ingredients: [
+        { name: 'chicken breast', amount: 1.5, unit: 'lb', original: '1.5 lb chicken breast' },
+        { name: 'sweet potatoes', amount: 3, unit: 'item', original: '3 sweet potatoes' },
+        { name: 'olive oil', amount: 2, unit: 'tbsp', original: '2 tbsp olive oil' },
+        { name: 'paprika', amount: 1, unit: 'tsp', original: '1 tsp paprika' },
+      ],
+      instructions: null,
+      nutrition: { calories: 385, protein: 32, carbs: 35, fat: 14, fiber: 5, sugar: 8, sodium: 520 },
+      prep_time: 15,
+      cook_time: 30,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '4',
+      user_id: null,
+      spoonacular_id: 4,
+      title: 'Thai Peanut Noodles',
+      image: 'https://spoonacular.com/recipeImages/715424-556x370.jpg',
+      ingredients: [
+        { name: 'noodles', amount: 8, unit: 'oz', original: '8 oz noodles' },
+        { name: 'peanut butter', amount: 0.5, unit: 'cup', original: '1/2 cup peanut butter' },
+        { name: 'soy sauce', amount: 3, unit: 'tbsp', original: '3 tbsp soy sauce' },
+        { name: 'ginger', amount: 1, unit: 'tbsp', original: '1 tbsp ginger' },
+      ],
+      instructions: null,
+      nutrition: { calories: 425, protein: 16, carbs: 52, fat: 18, fiber: 4, sugar: 8, sodium: 780 },
+      prep_time: 10,
+      cook_time: 10,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '5',
+      user_id: null,
+      spoonacular_id: 5,
+      title: 'Chicken Parmesan with Basil',
+      image: 'https://spoonacular.com/recipeImages/715467-556x370.jpg',
+      ingredients: [
+        { name: 'chicken breast', amount: 2, unit: 'lb', original: '2 lb chicken breast' },
+        { name: 'mozzarella cheese', amount: 8, unit: 'oz', original: '8 oz mozzarella' },
+        { name: 'tomato paste', amount: 6, unit: 'oz', original: '6 oz tomato paste' },
+        { name: 'basil', amount: 0.5, unit: 'cup', original: '1/2 cup basil' },
+      ],
+      instructions: null,
+      nutrition: { calories: 485, protein: 42, carbs: 22, fat: 26, fiber: 3, sugar: 10, sodium: 890 },
+      prep_time: 20,
+      cook_time: 25,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+    {
+      id: '6',
+      user_id: null,
+      spoonacular_id: 6,
+      title: 'Loaded Baked Sweet Potato',
+      image: 'https://spoonacular.com/recipeImages/782600-556x370.jpg',
+      ingredients: [
+        { name: 'sweet potatoes', amount: 4, unit: 'item', original: '4 sweet potatoes' },
+        { name: 'black beans', amount: 1, unit: 'can', original: '1 can black beans' },
+        { name: 'cheddar cheese', amount: 1, unit: 'cup', original: '1 cup cheddar cheese' },
+        { name: 'greek yogurt', amount: 0.5, unit: 'cup', original: '1/2 cup greek yogurt' },
+      ],
+      instructions: null,
+      nutrition: { calories: 365, protein: 14, carbs: 48, fat: 14, fiber: 10, sugar: 8, sodium: 420 },
+      prep_time: 10,
+      cook_time: 45,
+      servings: 4,
+      source: 'spoonacular',
+      is_favorite: false,
+      created_at: new Date().toISOString(),
+    },
+  ];
+
   async function findRecipes(items: PantryItem[]) {
     setLoading(true);
     try {
       const ingredientNames = items.map(item => item.name);
+      
+      // Check if API key is available
+      if (!process.env.NEXT_PUBLIC_SPOONACULAR_API_KEY) {
+        console.log('Using sample recipes (API key not configured)');
+        // Filter sample recipes based on pantry items
+        const filteredSamples = sampleRecipes.filter(recipe => 
+          recipe.ingredients.some(ing => 
+            items.some(pantryItem => 
+              pantryItem.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+              ing.name.toLowerCase().includes(pantryItem.name.toLowerCase())
+            )
+          )
+        );
+        setRecipes(filteredSamples.length > 0 ? filteredSamples : sampleRecipes);
+        return;
+      }
+      
       const spoonacularRecipes = await findRecipesByIngredients(ingredientNames, 12);
       
       // Convert to our Recipe format
@@ -65,6 +212,8 @@ export default function RecipesPage() {
       setRecipes(convertedRecipes);
     } catch (error) {
       console.error('Error finding recipes:', error);
+      // Fallback to sample recipes on error
+      setRecipes(sampleRecipes);
     } finally {
       setLoading(false);
     }

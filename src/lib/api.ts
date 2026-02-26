@@ -1,7 +1,15 @@
 import { SpoonacularRecipe, SpoonacularRecipeDetail, EdamamRecipe, Recipe } from './types';
 
-const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY!;
+// Note: In a real app, these API calls should be made from a server-side API route
+// to protect API keys. For demo purposes, we're calling directly from the browser
+// with a public key (limited permissions) or using a proxy.
+const SPOONACULAR_API_KEY = process.env.NEXT_PUBLIC_SPOONACULAR_API_KEY || '';
 const SPOONACULAR_BASE_URL = 'https://api.spoonacular.com';
+
+// Check if API key is configured
+if (!SPOONACULAR_API_KEY) {
+  console.warn('Spoonacular API key not configured. Recipes will not load.');
+}
 
 const EDAMAM_APP_ID = process.env.EDAMAM_APP_ID!;
 const EDAMAM_APP_KEY = process.env.EDAMAM_APP_KEY!;
