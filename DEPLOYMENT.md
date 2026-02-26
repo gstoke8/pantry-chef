@@ -34,25 +34,44 @@ Your Pantry Chef app is now on GitHub! Here's how to deploy it:
 
 ---
 
-## Step 2: Connect to Vercel
+## Step 2: Connect to Vercel (Easiest Method)
 
-### Option A: Vercel Dashboard (Easiest)
+### Deploy from Vercel Dashboard (Recommended)
 
-1. Go to [vercel.com](https://vercel.com)
-2. Sign in with GitHub
-3. Click "Add New Project"
-4. Import `pantry-chef` from your GitHub
-5. Configure environment variables:
+**This is the simplest and most reliable method:**
 
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_key
-SPOONACULAR_API_KEY=your_spoonacular_key
-EDAMAM_APP_ID=your_edamam_id
-EDAMAM_APP_KEY=your_edamam_key
-```
+1. Go to [vercel.com/dashboard](https://vercel.com/dashboard)
+2. Sign in with your GitHub account
+3. Click **"Add New Project"**
+4. Find and select your `pantry-chef` repository
+5. Click **"Import"**
+6. In the configuration screen, add these Environment Variables:
 
-6. Click Deploy!
+| Variable | Value | Required? |
+|----------|-------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | ✅ Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key | ✅ Yes |
+| `NEXT_PUBLIC_SPOONACULAR_API_KEY` | Your Spoonacular API key | ⚠️ Optional |
+| `EDAMAM_APP_ID` | Your Edamam app ID | ⚠️ Optional |
+| `EDAMAM_APP_KEY` | Your Edamam app key | ⚠️ Optional |
+
+7. Click **"Deploy"**
+
+**That's it!** Vercel will automatically:
+- Build your app
+- Deploy it to a global CDN
+- Give you a URL like `https://pantry-chef.vercel.app`
+- Auto-deploy on every push to GitHub
+
+### Why Not GitHub Actions?
+
+The GitHub Actions approach requires storing Vercel tokens as secrets, which is more complex. The Vercel Dashboard method is:
+- ✅ Easier to set up
+- ✅ More reliable
+- ✅ Auto-configures webhooks
+- ✅ Better error messages
+
+Use the Dashboard method unless you need advanced CI/CD features.
 
 ### Option B: Vercel CLI
 
