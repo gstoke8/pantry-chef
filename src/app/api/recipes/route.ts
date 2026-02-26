@@ -1,13 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || '';
-const EDAMAM_APP_KEY = process.env.NEXT_PUBLIC_EDAMAM_APP_KEY || '';
 const EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const ingredients = searchParams.get('ingredients');
   const number = searchParams.get('number') || '12';
+
+  // Get env vars at request time (not module load)
+  const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || '';
+  const EDAMAM_APP_KEY = process.env.NEXT_PUBLIC_EDAMAM_APP_KEY || '';
+
+  console.log('API Request received:', { 
+    ingredients: ingredients?.substring(0, 50),
+    hasAppId: !!EDAMAM_APP_ID,
+    hasAppKey: !!EDAMAM_APP_KEY,
+    appIdLength: EDAMAM_APP_ID.length,
+    appKeyLength: EDAMAM_APP_KEY.length,
+  });
 
   if (!ingredients) {
     return NextResponse.json(
@@ -18,14 +28,21 @@ export async function GET(request: NextRequest) {
 
   // Check if API keys are configured
   if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY) {
+    console.error('API keys not configured:', { 
+      hasAppId: !!EDAMAM_APP_ID, 
+      hasAppKey: !!EDAMAM_APP_KEY,
+      appIdFirst4: EDAMAM_APP_ID?.substring(0, 4) || 'none',
+    });
     return NextResponse.json(
       { 
         error: 'Edamam API keys not configured',
-        envCheck: {
+        debug: {
           hasAppId: !!EDAMAM_APP_ID,
           hasAppKey: !!EDAMAM_APP_KEY,
           appIdLength: EDAMAM_APP_ID.length,
-          appKeyLength: EDAMAM_APP_KEY.length
+          appKeyLength: EDAMAM_APP_KEY.length,
+          nodeEnv: process.env.NODE_ENV,
+          vercelEnv: process.env.VERCEL_ENV,
         }
       },
       { status: 503 }
@@ -45,18 +62,26 @@ export async function GET(request: NextRequest) {
       to: number,
     });
 
-    const response = await fetch(`${EDAMAM_BASE_URL}?${params}`);
+    const apiUrl = `${EDAMAM_BASE_URL}?${params}`;
+    console.log('Fetching from Edamam:', apiUrl.replace(EDAMAM_APP_KEY, '***'));
+
+    const response = await fetch(apiUrl);
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Edamam API error:', response.status, errorText);
       return NextResponse.json(
-        { error: `Edamam API error: ${response.status}`, details: errorText },
+        { 
+          error: `Edamam API error: ${response.status}`, 
+          details: errorText,
+          status: response.status,
+        },
         { status: response.status }
       );
     }
 
     const data = await response.json();
+    console.log('Edamam returned', data.hits?.length || 0, 'recipes');
     
     // Convert to our recipe format
     const recipes = data.hits?.map((hit: any) => ({
@@ -87,7 +112,7 @@ export async function GET(request: NextRequest) {
       recipes, 
       count: recipes.length,
       source: 'edamam',
-      query: ingredientList
+      query: ingredientList,
     });
 
   } catch (error) {
