@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { PantryItem, Recipe } from '@/lib/types';
-import { findRecipesByIngredients, convertSpoonacularToRecipe } from '@/lib/api';
+import { findRecipesByIngredients } from '@/lib/api';
 import { Search, ChefHat, Clock, Users, Heart, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -12,7 +12,6 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
     fetchPantryItems();
@@ -308,6 +307,7 @@ export default function RecipesPage() {
                 >
                   <div className="relative">
                     {recipe.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={recipe.image}
                         alt={recipe.title}

@@ -8,7 +8,7 @@ const mealTypes = ['breakfast', 'lunch', 'dinner'];
 
 export default function MealPlanPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [mealPlan, setMealPlan] = useState<Record<string, Record<string, string | null>>>({});
+  const [mealPlan] = useState<Record<string, Record<string, string | null>>>({});
 
   const weekStart = new Date(currentWeek);
   weekStart.setDate(currentWeek.getDate() - currentWeek.getDay() + 1);
