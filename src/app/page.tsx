@@ -202,9 +202,9 @@ export default function RecipesPage() {
       }
       
       // If API returns no recipes, fall back to sample recipes
-      if (!data.recipes || data.recipes.length === 0) {
-        console.log('No recipes returned from API, using samples');
-        setErrorMessage('No recipes found for your ingredients. Showing sample recipes.');
+      if (!data.recipes || !Array.isArray(data.recipes) || data.recipes.length === 0) {
+        console.log('No recipes returned from API, using samples. Data:', data);
+        setErrorMessage(`No recipes found for your ingredients (${data.count || 0} returned). Showing sample recipes.`);
         setApiStatus('fallback');
         setRecipes(sampleRecipes);
         return;
@@ -293,13 +293,13 @@ export default function RecipesPage() {
           {apiStatus === 'connected' && (
             <span className="text-xs text-emerald-600 font-medium flex items-center">
               <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
-              Edamam API
+              Edamam API ({recipes.length} recipes)
             </span>
           )}
           {apiStatus === 'fallback' && (
             <span className="text-xs text-amber-600 font-medium flex items-center">
               <span className="w-2 h-2 bg-amber-500 rounded-full mr-1"></span>
-              Sample recipes
+              Sample recipes ({recipes.length} recipes)
             </span>
           )}
         </div>
@@ -311,12 +311,18 @@ export default function RecipesPage() {
           </div>
         )}
 
-        {/* Manual Sample Recipes Button */}
-        {recipes.length === 0 && !loading && (
-          <div className="mt-3">
+        {/* Manual Fetch Buttons */}
+        {recipes.length === 0 && !loading && pantryItems.length > 0 && (
+          <div className="mt-3 flex gap-3">
+            <button
+              onClick={() => findRecipes(pantryItems)}
+              className="text-sm bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 font-medium"
+            >
+              Fetch Recipes from API
+            </button>
             <button
               onClick={loadSampleRecipes}
-              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium px-4 py-2"
             >
               Load sample recipes →
             </button>
