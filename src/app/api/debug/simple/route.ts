@@ -19,7 +19,9 @@ export async function GET(request: NextRequest) {
   if (appId && appKey) {
     try {
       const testUrl = `https://api.edamam.com/api/recipes/v2?type=public&q=test&app_id=${appId}&app_key=${appKey}&from=0&to=1`;
-      const response = await fetch(testUrl);
+      const response = await fetch(testUrl, {
+        headers: { 'Edamam-Account-User': 'pantry-chef-app' },
+      });
       
       const responseText = await response.text();
       
