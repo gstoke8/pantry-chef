@@ -2,6 +2,69 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const EDAMAM_BASE_URL = 'https://api.edamam.com/api/recipes/v2';
 
+// Priority categories for ingredient selection
+// We want to pick ingredients that are most likely to appear together in recipes
+const HIGH_PRIORITY_KEYWORDS = [
+  // Proteins
+  'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'shrimp', 'tofu', 'eggs',
+  // Starches
+  'rice', 'pasta', 'noodles', 'potato', 'bread', 'quinoa', 'couscous',
+  // Main vegetables
+  'tomato', 'onion', 'garlic', 'pepper', 'carrot', 'broccoli', 'spinach',
+  // Common bases
+  'cheese', 'milk', 'cream', 'yogurt', 'butter'
+];
+
+const LOW_PRIORITY_KEYWORDS = [
+  // Oils and vinegars (too generic, won't help matching)
+  'oil', 'vinegar', 'sauce', 'salt', 'pepper', 'sugar', 'water',
+  // Very specific items that rarely match
+  'blood orange', 'relish', 'glaze', 'chili oil', 'hot sauce'
+];
+
+// Score ingredients by how likely they are to yield good recipe matches
+function scoreIngredient(name: string): number {
+  const lower = name.toLowerCase();
+  
+  // High priority
+  for (const keyword of HIGH_PRIORITY_KEYWORDS) {
+    if (lower.includes(keyword)) return 10;
+  }
+  
+  // Medium priority (most vegetables, common items)
+  if (lower.length > 3) return 5;
+  
+  // Low priority
+  for (const keyword of LOW_PRIORITY_KEYWORDS) {
+    if (lower.includes(keyword)) return 1;
+  }
+  
+  return 3; // Default
+}
+
+// Smart ingredient selection - pick the best 8-10 ingredients
+function selectBestIngredients(ingredients: string[]): string[] {
+  // Score and sort
+  const scored = ingredients.map(name => ({
+    name,
+    score: scoreIngredient(name)
+  }));
+  
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+  
+  // Take top 8 (better to use fewer high-quality ingredients than many low-quality ones)
+  const selected = scored.slice(0, 8).map(i => i.name);
+  
+  console.log('Ingredient selection:', {
+    total: ingredients.length,
+    selected: selected,
+    topScores: scored.slice(0, 10).map(i => `${i.name}(${i.score})`)
+  });
+  
+  return selected;
+}
+
 // Edamam paid tier features:
 // - Up to 100 results per call (vs 20 on free)
 // - Advanced filters: cuisineType, mealType, diet, health, dishType
@@ -61,11 +124,15 @@ export async function GET(request: NextRequest) {
   try {
     // Parse ingredients - they come as comma-separated from the frontend
     const ingredientArray = ingredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
-    const ingredientList = ingredientArray.slice(0, 10).join(' '); // Edamam works better with space-separated
+    
+    // Use smart selection to pick the best ingredients
+    const selectedIngredients = selectBestIngredients(ingredientArray);
+    const ingredientList = selectedIngredients.join(' ');
     
     console.log('Ingredient debug:', {
       raw: ingredients.substring(0, 100),
       parsed: ingredientArray,
+      selected: selectedIngredients,
       query: ingredientList,
       count: ingredientArray.length,
     });
@@ -98,7 +165,7 @@ export async function GET(request: NextRequest) {
     if (calories) params.append('calories', `0-${calories}`); // Range format
 
     const apiUrl = `${EDAMAM_BASE_URL}?${params}`;
-    console.log('Fetching from Edamam with filters:', { cuisineType, mealType, diet, health, time, calories });
+    console.log('Fetching from Edamam:', apiUrl.substring(0, 200));
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -139,10 +206,38 @@ export async function GET(request: NextRequest) {
       hitsCount: data.hits?.length || 0,
       totalResults: data.count || 0,
       query: data.q,
-      params: data.params,
     });
     
-    // If no hits, return debug info to help troubleshoot
+    // If no hits, try with simpler query (just top 3 ingredients)
+    if (!data.hits || data.hits.length === 0) {
+      console.log('No recipes found with selected ingredients, trying simpler query...');
+      
+      const simpleQuery = selectedIngredients.slice(0, 3).join(' ');
+      const simpleParams = new URLSearchParams({
+        type: 'public',
+        q: simpleQuery,
+        app_id: EDAMAM_APP_ID,
+        app_key: EDAMAM_APP_KEY,
+        from: '0',
+        to: requestedCount.toString(),
+      });
+      
+      const simpleResponse = await fetch(`${EDAMAM_BASE_URL}?${simpleParams}`, {
+        headers: { 'Edamam-Account-User': 'pantry-chef-user' },
+      });
+      
+      if (simpleResponse.ok) {
+        const simpleData = await simpleResponse.json();
+        if (simpleData.hits && simpleData.hits.length > 0) {
+          console.log(`Found ${simpleData.hits.length} recipes with simpler query:`, simpleQuery);
+          // Use these results instead
+          data.hits = simpleData.hits;
+          data.count = simpleData.count;
+        }
+      }
+    }
+    
+    // If still no hits, return debug info
     if (!data.hits || data.hits.length === 0) {
       console.log('No recipes found for query:', ingredientList);
       return NextResponse.json({
@@ -152,11 +247,12 @@ export async function GET(request: NextRequest) {
         query: ingredientList,
         rawQuery: ingredients,
         parsedIngredients: ingredientArray,
+        selectedIngredients: selectedIngredients,
         filters: { cuisineType, mealType, diet, health, time, calories },
         debug: {
           edamamTotal: data.count || 0,
-          edamamParams: data.params,
-          message: 'No recipes found. Try removing filters or using different ingredients.',
+          message: 'No recipes found. Try adding more common ingredients like chicken, rice, pasta, or eggs.',
+          suggestion: 'The app selected these ingredients for search: ' + selectedIngredients.join(', '),
         },
       });
     }
@@ -220,6 +316,7 @@ export async function GET(request: NextRequest) {
       count: recipes.length,
       source: 'edamam',
       query: ingredientList,
+      selectedIngredients: selectedIngredients,
       filters: {
         cuisineType,
         mealType,

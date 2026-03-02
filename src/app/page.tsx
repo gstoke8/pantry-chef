@@ -223,11 +223,15 @@ export default function RecipesPage() {
         
         // Check if we were using filters
         const hasFilters = Object.values(searchFilters).some(v => v !== undefined);
+        const selectedForSearch = data.selectedIngredients || ingredientNames.slice(0, 8);
         
         if (hasFilters) {
           setErrorMessage(`No recipes found with current filters. Try removing filters or using different ingredients.`);
         } else {
-          setErrorMessage(`No recipes found for: ${ingredientNames.join(', ')}. Try adding more common ingredients like chicken, rice, pasta, or eggs.`);
+          setErrorMessage(
+            `No recipes found using: ${selectedForSearch.join(', ')}. ` +
+            `Try adding more common ingredients like chicken, rice, pasta, or eggs.`
+          );
         }
         
         setApiStatus('fallback');
