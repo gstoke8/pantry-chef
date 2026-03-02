@@ -108,13 +108,20 @@ export async function GET(request: NextRequest) {
 
   // Check if API keys are configured
   if (!EDAMAM_APP_ID || !EDAMAM_APP_KEY) {
-    console.error('API keys not configured');
+    console.error('API keys not configured:', {
+      appIdPresent: !!EDAMAM_APP_ID,
+      appKeyPresent: !!EDAMAM_APP_KEY,
+      appIdValue: EDAMAM_APP_ID ? `${EDAMAM_APP_ID.substring(0, 4)}...` : 'empty',
+      allEnvVars: Object.keys(process.env).filter(k => k.includes('EDAMAM') || k.includes('PUBLIC')),
+    });
     return NextResponse.json(
       { 
-        error: 'Edamam API keys not configured',
+        error: 'Edamam API keys not configured in Vercel environment variables',
         debug: {
           hasAppId: !!EDAMAM_APP_ID,
           hasAppKey: !!EDAMAM_APP_KEY,
+          availableEnvVars: Object.keys(process.env).filter(k => k.includes('EDAMAM')),
+          help: 'Go to Vercel Dashboard → Settings → Environment Variables and add NEXT_PUBLIC_EDAMAM_APP_ID and NEXT_PUBLIC_EDAMAM_APP_KEY',
         }
       },
       { status: 503 }
@@ -180,8 +187,16 @@ export async function GET(request: NextRequest) {
       
       // Provide helpful error messages for common issues
       let userMessage = `Edamam API error: ${response.status}`;
+      let troubleshooting = 'Visit /api/debug/simple to check your configuration';
+      
       if (response.status === 401) {
-        userMessage = 'Edamam API authentication failed. Check that your API keys are set in Vercel Dashboard (Settings → Environment Variables) and that your Developer plan is active.';
+        const isHeaderIssue = errorText.includes('userID') || errorText.includes('Edamam-Account-User');
+        if (isHeaderIssue) {
+          userMessage = 'Edamam API: User header issue. The app may need a different header configuration.';
+        } else {
+          userMessage = 'Edamam API authentication failed. The API keys may be incorrect or the Developer plan is not active.';
+        }
+        troubleshooting += `. Error details: ${errorText.substring(0, 100)}`;
       } else if (response.status === 403) {
         userMessage = 'Edamam API access denied. Your plan may have expired or rate limit exceeded.';
       } else if (response.status === 429) {
@@ -193,7 +208,8 @@ export async function GET(request: NextRequest) {
           error: userMessage, 
           details: errorText,
           status: response.status,
-          troubleshooting: 'Visit /api/debug/env to check your configuration',
+          troubleshooting,
+          appIdPrefix: EDAMAM_APP_ID.substring(0, 4) + '...',
         },
         { status: response.status }
       );
