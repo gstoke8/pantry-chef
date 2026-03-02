@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { PantryItem, Recipe } from '@/lib/types';
-import { Search, ChefHat, Clock, Users, Heart, Loader2, X, ExternalLink } from 'lucide-react';
+import { PantryItem, Recipe, RecipeFilters } from '@/lib/types';
+import { Search, ChefHat, Clock, Users, Heart, Loader2, X, ExternalLink, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { RecipeFiltersPanel } from '@/components/RecipeFilters';
 
 export default function RecipesPage() {
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([]);
@@ -14,6 +15,7 @@ export default function RecipesPage() {
   const [apiStatus, setApiStatus] = useState<'checking' | 'connected' | 'fallback'>('checking');
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [filters, setFilters] = useState<RecipeFilters>({});
 
   useEffect(() => {
     fetchPantryItems();
@@ -171,7 +173,7 @@ export default function RecipesPage() {
     },
   ];
 
-  async function findRecipes(items: PantryItem[]) {
+  async function findRecipes(items: PantryItem[], searchFilters: RecipeFilters = filters) {
     setLoading(true);
     setApiStatus('checking');
     setErrorMessage(null);
@@ -179,8 +181,22 @@ export default function RecipesPage() {
     try {
       const ingredientNames = items.map(item => item.name);
       
+      // Build query params with filters
+      const params = new URLSearchParams({
+        ingredients: ingredientNames.join(','),
+        number: '20', // Paid tier: get more recipes
+      });
+      
+      // Add filter params if set
+      if (searchFilters.cuisineType) params.append('cuisineType', searchFilters.cuisineType);
+      if (searchFilters.mealType) params.append('mealType', searchFilters.mealType);
+      if (searchFilters.diet) params.append('diet', searchFilters.diet);
+      if (searchFilters.health) params.append('health', searchFilters.health);
+      if (searchFilters.maxTime) params.append('time', searchFilters.maxTime.toString());
+      if (searchFilters.maxCalories) params.append('calories', searchFilters.maxCalories.toString());
+      
       // Call our server-side API route
-      const response = await fetch(`/api/recipes?ingredients=${encodeURIComponent(ingredientNames.join(','))}&number=12`);
+      const response = await fetch(`/api/recipes?${params}`);
       
       const data = await response.json();
       console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error });
@@ -212,7 +228,7 @@ export default function RecipesPage() {
       
       setApiStatus('connected');
       
-      // Convert API recipes to our Recipe format
+      // Convert API recipes to our Recipe format with paid tier fields
       const convertedRecipes: Recipe[] = data.recipes.map((recipe: any) => ({
         id: recipe.id,
         user_id: null,
@@ -220,13 +236,22 @@ export default function RecipesPage() {
         title: recipe.title,
         image: recipe.image,
         url: recipe.url || null,
+        source_name: recipe.source,
         ingredients: recipe.ingredients,
+        ingredientLines: recipe.ingredientLines,
         instructions: null,
         nutrition: recipe.nutrition,
         prep_time: recipe.prep_time,
         cook_time: null,
         servings: recipe.servings,
-        source: recipe.source,
+        source: recipe.source_id || 'edamam',
+        // Paid tier fields
+        dietLabels: recipe.dietLabels,
+        healthLabels: recipe.healthLabels,
+        cautions: recipe.cautions,
+        cuisineType: recipe.cuisineType,
+        mealType: recipe.mealType,
+        dishType: recipe.dishType,
         is_favorite: false,
         created_at: new Date().toISOString(),
       }));
@@ -293,7 +318,7 @@ export default function RecipesPage() {
           {apiStatus === 'connected' && (
             <span className="text-xs text-emerald-600 font-medium flex items-center">
               <span className="w-2 h-2 bg-emerald-500 rounded-full mr-1"></span>
-              Edamam API ({recipes.length} recipes)
+              Edamam Pro ({recipes.length} recipes)
             </span>
           )}
           {apiStatus === 'fallback' && (
@@ -308,6 +333,22 @@ export default function RecipesPage() {
         {errorMessage && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-700">{errorMessage}</p>
+          </div>
+        )}
+
+        {/* Filters */}
+        {pantryItems.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              <span className="text-sm font-medium text-gray-700">Paid Tier Features</span>
+            </div>
+            <RecipeFiltersPanel
+              filters={filters}
+              onFiltersChange={setFilters}
+              onApplyFilters={() => findRecipes(pantryItems)}
+              disabled={loading}
+            />
           </div>
         )}
 
@@ -433,21 +474,33 @@ export default function RecipesPage() {
                         {recipe.servings} servings
                       </div>
                     </div>
-                    <div className="mt-2 sm:mt-3 flex flex-wrap gap-1">
-                      {recipe.ingredients.slice(0, 2).map((ing, idx) => (
-                        <span
-                          key={idx}
-                          className="px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs"
-                        >
-                          {ing.name}
+                    {/* Paid tier: Health labels */}
+                    {recipe.healthLabels && recipe.healthLabels.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {recipe.healthLabels.slice(0, 3).map((label, idx) => (
+                          <span
+                            key={idx}
+                            className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-xs font-medium"
+                          >
+                            {label.replace(/-/g, ' ')}
+                          </span>
+                        ))}
+                        {recipe.healthLabels.length > 3 && (
+                          <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded text-xs">
+                            +{recipe.healthLabels.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {/* Cuisine type badge */}
+                    {recipe.cuisineType && recipe.cuisineType.length > 0 && (
+                      <div className="mt-1.5">
+                        <span className="text-xs text-gray-400 capitalize">
+                          {recipe.cuisineType[0].replace(/-/g, ' ')}
+                          {recipe.dishType && recipe.dishType.length > 0 && ` • ${recipe.dishType[0].replace(/-/g, ' ')}`}
                         </span>
-                      ))}
-                      {recipe.ingredients.length > 2 && (
-                        <span className="px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                          +{recipe.ingredients.length - 2}
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <button
                       className="mt-3 sm:mt-4 w-full bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition-colors text-sm sm:text-base"
                       onClick={() => setSelectedRecipe(recipe)}
@@ -512,19 +565,47 @@ export default function RecipesPage() {
                 )}
               </div>
 
+              {/* Paid Tier: Health & Diet Labels */}
+              {(selectedRecipe.healthLabels?.length || selectedRecipe.dietLabels?.length) ? (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {selectedRecipe.dietLabels?.map((label, idx) => (
+                    <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
+                      {label}
+                    </span>
+                  ))}
+                  {selectedRecipe.healthLabels?.slice(0, 5).map((label, idx) => (
+                    <span key={idx} className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-medium">
+                      {label.replace(/-/g, ' ')}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
               {/* Ingredients Section */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingredients</h3>
-                <ul className="space-y-2">
-                  {selectedRecipe.ingredients.map((ing, idx) => (
-                    <li key={idx} className="flex items-start text-sm text-gray-700">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                      <span>
-                        {ing.original || `${ing.amount} ${ing.unit} ${ing.name}`}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {/* Paid tier: Use ingredientLines if available for cleaner display */}
+                {selectedRecipe.ingredientLines && selectedRecipe.ingredientLines.length > 0 ? (
+                  <ul className="space-y-2">
+                    {selectedRecipe.ingredientLines.map((line, idx) => (
+                      <li key={idx} className="flex items-start text-sm text-gray-700">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                        <span>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-2">
+                    {selectedRecipe.ingredients.map((ing, idx) => (
+                      <li key={idx} className="flex items-start text-sm text-gray-700">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
+                        <span>
+                          {ing.original || `${ing.amount} ${ing.unit} ${ing.name}`}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* Instructions Notice */}
@@ -535,11 +616,12 @@ export default function RecipesPage() {
                 </p>
               </div>
 
-              {/* Nutrition Info (if available) */}
+              {/* Nutrition Info (if available) - Enhanced with paid tier micronutrients */}
               {selectedRecipe.nutrition && (
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3">Nutrition (per serving)</h3>
-                  <div className="grid grid-cols-3 gap-3 text-center">
+                  {/* Macronutrients */}
+                  <div className="grid grid-cols-3 gap-3 text-center mb-3">
                     <div className="bg-gray-50 rounded-lg p-3">
                       <div className="text-lg font-semibold text-gray-900">
                         {Math.round(selectedRecipe.nutrition.protein)}g
@@ -559,6 +641,72 @@ export default function RecipesPage() {
                       <div className="text-xs text-gray-500">Fat</div>
                     </div>
                   </div>
+                  {/* Paid tier: Micronutrients */}
+                  {(selectedRecipe.nutrition.fiber || selectedRecipe.nutrition.sugar || selectedRecipe.nutrition.sodium) && (
+                    <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                      {selectedRecipe.nutrition.fiber !== undefined && (
+                        <div className="bg-emerald-50 rounded-lg p-2">
+                          <div className="text-base font-semibold text-emerald-700">
+                            {Math.round(selectedRecipe.nutrition.fiber)}g
+                          </div>
+                          <div className="text-xs text-emerald-600">Fiber</div>
+                        </div>
+                      )}
+                      {selectedRecipe.nutrition.sugar !== undefined && (
+                        <div className="bg-emerald-50 rounded-lg p-2">
+                          <div className="text-base font-semibold text-emerald-700">
+                            {Math.round(selectedRecipe.nutrition.sugar)}g
+                          </div>
+                          <div className="text-xs text-emerald-600">Sugar</div>
+                        </div>
+                      )}
+                      {selectedRecipe.nutrition.sodium !== undefined && (
+                        <div className="bg-emerald-50 rounded-lg p-2">
+                          <div className="text-base font-semibold text-emerald-700">
+                            {Math.round(selectedRecipe.nutrition.sodium)}mg
+                          </div>
+                          <div className="text-xs text-emerald-600">Sodium</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Paid tier: Additional micronutrients */}
+                  {(selectedRecipe.nutrition.calcium || selectedRecipe.nutrition.iron || selectedRecipe.nutrition.vitamin_c) && (
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {selectedRecipe.nutrition.calcium !== undefined && (
+                        <div className="bg-blue-50 rounded-lg p-2">
+                          <div className="text-sm font-semibold text-blue-700">
+                            {Math.round(selectedRecipe.nutrition.calcium)}mg
+                          </div>
+                          <div className="text-xs text-blue-600">Calcium</div>
+                        </div>
+                      )}
+                      {selectedRecipe.nutrition.iron !== undefined && (
+                        <div className="bg-blue-50 rounded-lg p-2">
+                          <div className="text-sm font-semibold text-blue-700">
+                            {selectedRecipe.nutrition.iron}mg
+                          </div>
+                          <div className="text-xs text-blue-600">Iron</div>
+                        </div>
+                      )}
+                      {selectedRecipe.nutrition.vitamin_c !== undefined && (
+                        <div className="bg-blue-50 rounded-lg p-2">
+                          <div className="text-sm font-semibold text-blue-700">
+                            {selectedRecipe.nutrition.vitamin_c}mg
+                          </div>
+                          <div className="text-xs text-blue-600">Vitamin C</div>
+                        </div>
+                      )}
+                      {selectedRecipe.nutrition.potassium !== undefined && (
+                        <div className="bg-blue-50 rounded-lg p-2">
+                          <div className="text-sm font-semibold text-blue-700">
+                            {Math.round(selectedRecipe.nutrition.potassium)}mg
+                          </div>
+                          <div className="text-xs text-blue-600">Potassium</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

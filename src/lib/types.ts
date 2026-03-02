@@ -38,13 +38,22 @@ export interface Recipe {
   title: string;
   image: string | null;
   url: string | null; // Source URL for full recipe
+  source_name?: string; // e.g., "BBC Good Food", "All Recipes"
   ingredients: RecipeIngredient[];
+  ingredientLines?: string[]; // Full ingredient text from Edamam
   instructions: string[] | null;
   nutrition: NutritionInfo | null;
   prep_time: number | null;
   cook_time: number | null;
   servings: number;
   source: 'spoonacular' | 'edamam' | 'ai-generated' | 'user-created';
+  // Paid tier fields from Edamam
+  dietLabels?: string[]; // e.g., "balanced", "high-protein"
+  healthLabels?: string[]; // e.g., "vegan", "gluten-free"
+  cautions?: string[];
+  cuisineType?: string[]; // e.g., "italian", "mexican"
+  mealType?: string[]; // e.g., "lunch", "dinner"
+  dishType?: string[]; // e.g., "main course", "starter"
   is_favorite: boolean;
   created_at: string;
 }
@@ -54,6 +63,9 @@ export interface RecipeIngredient {
   amount: number;
   unit: string;
   original?: string;
+  // Paid tier fields from Edamam
+  weight?: number; // Weight in grams
+  category?: string; // Food category
 }
 
 export interface NutritionInfo {
@@ -102,6 +114,39 @@ export interface DailyMeals {
 
 export type DayOfWeek = keyof WeeklyMeals;
 export type MealType = keyof DailyMeals;
+
+// Edamam paid tier filter options
+export type CuisineType = 
+  | 'american' | 'asian' | 'british' | 'caribbean' | 'central europe' 
+  | 'chinese' | 'eastern europe' | 'french' | 'greek' | 'indian' 
+  | 'italian' | 'japanese' | 'korean' | 'kosher' | 'mediterranean' 
+  | 'mexican' | 'middle eastern' | 'nordic' | 'south american' 
+  | 'south east asian' | 'world';
+
+export type EdamamMealType = 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'teatime';
+
+export type DietType = 
+  | 'balanced' | 'high-fiber' | 'high-protein' | 'low-carb' 
+  | 'low-fat' | 'low-sodium';
+
+export type HealthLabel = 
+  | 'alcohol-cocktail' | 'alcohol-free' | 'celery-free' | 'crustacean-free' 
+  | 'dairy-free' | 'dash' | 'egg-free' | 'fish-free' | 'fodmap-free' 
+  | 'gluten-free' | 'immuno-supportive' | 'keto-friendly' | 'kidney-friendly' 
+  | 'kosher' | 'low-fat-abs' | 'low-potassium' | 'low-sugar' | 'lupine-free' 
+  | 'mediterranean' | 'mollusk-free' | 'mustard-free' | 'no-oil-added' 
+  | 'paleo' | 'peanut-free' | 'pescatarian' | 'pork-free' | 'red-meat-free' 
+  | 'sesame-free' | 'shellfish-free' | 'soy-free' | 'sugar-conscious' 
+  | 'sulfite-free' | 'tree-nut-free' | 'vegan' | 'vegetarian' | 'wheat-free';
+
+export interface RecipeFilters {
+  cuisineType?: CuisineType;
+  mealType?: EdamamMealType;
+  diet?: DietType;
+  health?: HealthLabel;
+  maxTime?: number; // in minutes
+  maxCalories?: number;
+}
 
 export interface ShoppingList {
   id: string;
