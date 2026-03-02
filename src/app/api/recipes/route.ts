@@ -169,9 +169,6 @@ export async function GET(request: NextRequest) {
 
     const response = await fetch(apiUrl, {
       headers: {
-        // Edamam requires this header for all apps
-        'Edamam-Account-User': 'pantry-chef-user',
-        // Optional: Add these for better rate limit tracking on paid tier
         'Accept': 'application/json',
       },
     });
@@ -222,9 +219,7 @@ export async function GET(request: NextRequest) {
         to: requestedCount.toString(),
       });
       
-      const simpleResponse = await fetch(`${EDAMAM_BASE_URL}?${simpleParams}`, {
-        headers: { 'Edamam-Account-User': 'pantry-chef-user' },
-      });
+      const simpleResponse = await fetch(`${EDAMAM_BASE_URL}?${simpleParams}`);
       
       if (simpleResponse.ok) {
         const simpleData = await simpleResponse.json();
