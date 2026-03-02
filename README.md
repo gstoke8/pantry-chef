@@ -6,9 +6,11 @@ A mobile-first web app for managing your pantry, finding recipes based on availa
 
 - **Pantry Management** — Add, edit, and organize your ingredients by category
 - **Recipe Finder** — Get personalized recipe suggestions based on your pantry
+- **Advanced Filters** — Filter by cuisine, meal type, diet, health labels, cooking time, and calories (paid tier)
 - **Meal Planner** — Plan your weekly meals with an intuitive calendar view
 - **Shopping Lists** — Auto-generate shopping lists from your meal plan
-- **Nutritional Info** — Detailed nutrition data for recipes
+- **Nutritional Info** — Detailed nutrition data with full micronutrient profiles (paid tier)
+- **Dietary Labels** — Vegan, keto, gluten-free, and 40+ health labels (paid tier)
 - **Optional Accounts** — Sync across devices or use locally
 
 ## Tech Stack
@@ -87,8 +89,29 @@ git push origin main
 ## API Rate Limits
 
 - **Spoonacular:** 150 calls/day (free tier)
-- **Edamam:** 10,000 calls/month (free tier)
+- **Edamam:** 10,000 calls/month (free tier) → **100,000+ with paid tier**
 - **Supabase:** 500MB storage (free tier)
+
+### Edamam Paid Tier Benefits
+
+The app supports Edamam's paid tier with enhanced features:
+
+| Feature | Free | Paid (Developer) |
+|---------|------|------------------|
+| Monthly calls | 10,000 | 100,000 |
+| Results per search | 20 | Up to 100 |
+| Cuisine filters | ❌ | ✅ |
+| Meal type filters | ❌ | ✅ |
+| Diet/health filters | ❌ | ✅ 40+ labels |
+| Time/calorie filters | ❌ | ✅ |
+| Micronutrients | Basic | Full profile |
+| Cost | Free | $29/month |
+
+**To upgrade:**
+1. Go to [developer.edamam.com](https://developer.edamam.com)
+2. Navigate to "Plans & Pricing"
+3. Select "Developer" plan
+4. Your existing API keys will automatically gain access to paid features
 
 ## Folder Structure
 

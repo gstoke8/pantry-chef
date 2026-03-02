@@ -148,16 +148,32 @@ Once deployed, check:
 
 ---
 
-## 📊 Usage Limits (Free Tiers)
+## 📊 Usage Limits
 
+### Free Tiers
 | Service | Free Limit | Cost if Exceeded |
 |---------|-----------|------------------|
 | Vercel | 100GB bandwidth | $20/mo |
 | Supabase | 500MB storage | $25/mo |
 | Spoonacular | 150 calls/day | $29/mo |
-| Edamam | 10K calls/month | $29/mo |
 
-For personal use, you'll likely stay on free tiers for months/years.
+### Paid Tiers (Recommended)
+| Service | Plan | Limits | Cost |
+|---------|------|--------|------|
+| **Edamam** | Developer | 100K calls/month, advanced filters | $29/mo |
+| Edamam | Startup | 500K calls/month | $99/mo |
+
+**Paid Edamam Features:**
+- ✅ **100K+ API calls/month** (vs 10K free)
+- ✅ **Advanced filters**: Cuisine type, meal type, diet, health labels
+- ✅ **Time & calorie filters**: Filter by max cooking time and calories
+- ✅ **More results**: Up to 100 recipes per request (vs 20 free)
+- ✅ **Enhanced nutrition**: Full micronutrient profiles (calcium, iron, vitamins)
+- ✅ **Better ingredient data**: Food categories and weights
+- ✅ **Diet & health labels**: Vegan, keto, gluten-free, and 40+ more
+- ✅ **Cuisine & dish types**: Italian, Mexican, breakfast, dinner, etc.
+
+For active users, the Edamam Developer plan ($29/mo) is highly recommended.
 
 ---
 
