@@ -217,10 +217,19 @@ export default function RecipesPage() {
         return;
       }
       
-      // If API returns no recipes, fall back to sample recipes
+      // If API returns no recipes, show options to user
       if (!data.recipes || !Array.isArray(data.recipes) || data.recipes.length === 0) {
-        console.log('No recipes returned from API, using samples. Data:', data);
-        setErrorMessage(`No recipes found for your ingredients (${data.count || 0} returned). Showing sample recipes.`);
+        console.log('No recipes returned from API. Data:', data);
+        
+        // Check if we were using filters
+        const hasFilters = Object.values(searchFilters).some(v => v !== undefined);
+        
+        if (hasFilters) {
+          setErrorMessage(`No recipes found with current filters. Try removing filters or using different ingredients.`);
+        } else {
+          setErrorMessage(`No recipes found for: ${ingredientNames.join(', ')}. Try adding more common ingredients like chicken, rice, pasta, or eggs.`);
+        }
+        
         setApiStatus('fallback');
         setRecipes(sampleRecipes);
         return;
@@ -333,6 +342,19 @@ export default function RecipesPage() {
         {errorMessage && (
           <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-700">{errorMessage}</p>
+            {/* Show "Try without filters" button if filters are active */}
+            {Object.values(filters).some(v => v !== undefined) && (
+              <button
+                onClick={() => {
+                  setFilters({});
+                  findRecipes(pantryItems, {});
+                }}
+                disabled={loading}
+                className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+              >
+                Try without filters →
+              </button>
+            )}
           </div>
         )}
 

@@ -59,12 +59,21 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Build query from ingredients - use more ingredients for better results (paid tier allows more complex queries)
-    const ingredientList = ingredients.split(',').slice(0, 10).join(' '); // Increased to 10 for paid tier
+    // Parse ingredients - they come as comma-separated from the frontend
+    const ingredientArray = ingredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+    const ingredientList = ingredientArray.slice(0, 10).join(' '); // Edamam works better with space-separated
+    
+    console.log('Ingredient debug:', {
+      raw: ingredients.substring(0, 100),
+      parsed: ingredientArray,
+      query: ingredientList,
+      count: ingredientArray.length,
+    });
     
     // Request more recipes (paid tier supports up to 100)
     const requestedCount = Math.min(parseInt(number) || 20, 100);
     
+    // Build params - note: random param may not work on all Edamam tiers
     const params = new URLSearchParams({
       type: 'public',
       q: ingredientList,
@@ -72,9 +81,12 @@ export async function GET(request: NextRequest) {
       app_key: EDAMAM_APP_KEY,
       from: '0',
       to: requestedCount.toString(),
-      // Add randomness to get different recipes on each call
-      random: 'true',
     });
+    
+    // Only add random if not using filters (some tiers restrict this)
+    if (!cuisineType && !mealType && !diet && !health) {
+      params.append('random', 'true');
+    }
 
     // Add paid tier filter parameters
     if (cuisineType) params.append('cuisineType', cuisineType);
@@ -123,8 +135,32 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('Edamam returned', data.hits?.length || 0, 'recipes');
+    console.log('Edamam response:', {
+      hitsCount: data.hits?.length || 0,
+      totalResults: data.count || 0,
+      query: data.q,
+      params: data.params,
+    });
     
+    // If no hits, return debug info to help troubleshoot
+    if (!data.hits || data.hits.length === 0) {
+      console.log('No recipes found for query:', ingredientList);
+      return NextResponse.json({
+        recipes: [],
+        count: 0,
+        source: 'edamam',
+        query: ingredientList,
+        rawQuery: ingredients,
+        parsedIngredients: ingredientArray,
+        filters: { cuisineType, mealType, diet, health, time, calories },
+        debug: {
+          edamamTotal: data.count || 0,
+          edamamParams: data.params,
+          message: 'No recipes found. Try removing filters or using different ingredients.',
+        },
+      });
+    }
+
     // Convert to our recipe format with enhanced nutrition data (paid tier has more nutrients)
     const recipes = data.hits?.map((hit: any) => {
       const recipe = hit.recipe;
