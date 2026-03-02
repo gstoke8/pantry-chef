@@ -100,11 +100,23 @@ export async function GET(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Edamam API error:', response.status, errorText);
+      
+      // Provide helpful error messages for common issues
+      let userMessage = `Edamam API error: ${response.status}`;
+      if (response.status === 401) {
+        userMessage = 'Edamam API authentication failed. Check that your API keys are set in Vercel Dashboard (Settings → Environment Variables) and that your Developer plan is active.';
+      } else if (response.status === 403) {
+        userMessage = 'Edamam API access denied. Your plan may have expired or rate limit exceeded.';
+      } else if (response.status === 429) {
+        userMessage = 'Edamam API rate limit exceeded. Please wait a moment and try again.';
+      }
+      
       return NextResponse.json(
         { 
-          error: `Edamam API error: ${response.status}`, 
+          error: userMessage, 
           details: errorText,
           status: response.status,
+          troubleshooting: 'Visit /api/debug/env to check your configuration',
         },
         { status: response.status }
       );
