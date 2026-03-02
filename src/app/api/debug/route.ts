@@ -34,7 +34,9 @@ export async function GET() {
         to: '1',
       });
 
-      const response = await fetch(`https://api.edamam.com/api/recipes/v2?${params}`);
+      const response = await fetch(`https://api.edamam.com/api/recipes/v2?${params}`, {
+        headers: { 'Edamam-Account-User': 'pantry-chef-app' },
+      });
       apiTest.status = response.status;
       apiTest.success = response.ok;
       
