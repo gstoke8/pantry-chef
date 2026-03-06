@@ -269,6 +269,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert to our recipe format with enhanced nutrition data (paid tier has more nutrients)
+    // Debug: Log raw API response structure
+    console.log('Edamam raw response:', {
+      totalHits: data.hits?.length,
+      count: data.count,
+      from: data.from,
+      to: data.to,
+    });
+
     const recipes = data.hits?.map((hit: any) => {
       const recipe = hit.recipe;
       const nutrients = recipe.totalNutrients || {};
@@ -321,6 +329,8 @@ export async function GET(request: NextRequest) {
         source_id: 'edamam',
       };
     }) || [];
+
+    console.log('Returning recipes:', { count: recipes.length, firstRecipe: recipes[0]?.title });
 
     return NextResponse.json({ 
       recipes, 

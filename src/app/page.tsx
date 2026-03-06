@@ -241,6 +241,8 @@ export default function RecipesPage() {
       
       setApiStatus('connected');
       
+      console.log('API returned recipes:', { count: data.recipes?.length, data: data });
+      
       // Convert API recipes to our Recipe format with paid tier fields
       const convertedRecipes: Recipe[] = data.recipes.map((recipe: any) => ({
         id: recipe.id,
@@ -269,6 +271,8 @@ export default function RecipesPage() {
         created_at: new Date().toISOString(),
       }));
 
+      console.log('Setting recipes:', { count: convertedRecipes.length });
+      
       setRecipes(convertedRecipes);
     } catch (error) {
       console.error('Error finding recipes:', error);
