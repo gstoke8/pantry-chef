@@ -157,8 +157,10 @@ export async function GET(request: NextRequest) {
       to: requestedCount.toString(),
     });
     
-    // Only add random if not using filters (some tiers restrict this)
-    if (!cuisineType && !mealType && !diet && !health) {
+    // Note: random parameter can cause issues with some Edamam tiers
+    // Only add it if explicitly requested and not using filters
+    const useRandom = searchParams.get('random') === 'true';
+    if (useRandom && !cuisineType && !mealType && !diet && !health) {
       params.append('random', 'true');
     }
 
@@ -172,7 +174,13 @@ export async function GET(request: NextRequest) {
     if (calories) params.append('calories', `0-${calories}`); // Range format
 
     const apiUrl = `${EDAMAM_BASE_URL}?${params}`;
-    console.log('Fetching from Edamam:', apiUrl.substring(0, 200));
+    console.log('Fetching from Edamam:', apiUrl);
+    console.log('Query params:', {
+      q: ingredientList,
+      from: '0',
+      to: requestedCount.toString(),
+      random: useRandom ? 'true' : 'false',
+    });
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -275,6 +283,8 @@ export async function GET(request: NextRequest) {
       count: data.count,
       from: data.from,
       to: data.to,
+      query: data.q,
+      params: data.params,
     });
 
     const recipes = data.hits?.map((hit: any) => {
