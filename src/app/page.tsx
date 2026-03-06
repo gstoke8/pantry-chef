@@ -173,13 +173,34 @@ export default function RecipesPage() {
     },
   ];
 
+  // Priority keywords for ingredient sorting
+  const PROTEIN_KEYWORDS = ['chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'shrimp', 'tofu', 'eggs', 'turkey', 'lamb', 'duck'];
+  
+  function scoreIngredientForSorting(name: string): number {
+    const lower = name.toLowerCase();
+    // Proteins get highest score
+    for (const protein of PROTEIN_KEYWORDS) {
+      if (lower.includes(protein)) return 100;
+    }
+    // Starches get medium score
+    if (['rice', 'pasta', 'noodles', 'potato', 'bread', 'quinoa', 'couscous'].some(s => lower.includes(s))) return 50;
+    // Common vegetables
+    if (['tomato', 'onion', 'garlic', 'pepper', 'carrot'].some(v => lower.includes(v))) return 25;
+    // Everything else
+    return 10;
+  }
+  
   async function findRecipes(items: PantryItem[], searchFilters: RecipeFilters = filters) {
     setLoading(true);
     setApiStatus('checking');
     setErrorMessage(null);
     
     try {
-      const ingredientNames = items.map(item => item.name);
+      // Sort ingredients by priority (proteins first)
+      const sortedItems = [...items].sort((a, b) => {
+        return scoreIngredientForSorting(b.name) - scoreIngredientForSorting(a.name);
+      });
+      const ingredientNames = sortedItems.map(item => item.name);
       
       // Build query params with filters
       const params = new URLSearchParams({
