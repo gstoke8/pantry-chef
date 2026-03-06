@@ -177,7 +177,6 @@ export async function GET(request: NextRequest) {
     const response = await fetch(apiUrl, {
       headers: {
         'Accept': 'application/json',
-        'Edamam-Account-User': 'pantry-chef-app',
       },
     });
 
@@ -236,12 +235,7 @@ export async function GET(request: NextRequest) {
         to: requestedCount.toString(),
       });
       
-      const simpleResponse = await fetch(`${EDAMAM_BASE_URL}?${simpleParams}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Edamam-Account-User': 'pantry-chef-app',
-        },
-      });
+      const simpleResponse = await fetch(`${EDAMAM_BASE_URL}?${simpleParams}`);
       
       if (simpleResponse.ok) {
         const simpleData = await simpleResponse.json();
