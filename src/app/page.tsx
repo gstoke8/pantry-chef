@@ -196,10 +196,12 @@ export default function RecipesPage() {
       if (searchFilters.maxCalories) params.append('calories', searchFilters.maxCalories.toString());
       
       // Call our server-side API route
-      const response = await fetch(`/api/recipes?${params}`);
+      const apiUrl = `/api/recipes?${params}`;
+      console.log('Calling API:', apiUrl);
+      const response = await fetch(apiUrl);
       
       const data = await response.json();
-      console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error });
+      console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error, query: data.query, selectedIngredients: data.selectedIngredients });
       
       if (!response.ok) {
         console.error('API error:', data);
