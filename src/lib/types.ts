@@ -54,6 +54,14 @@ export interface Recipe {
   cuisineType?: string[]; // e.g., "italian", "mexican"
   mealType?: string[]; // e.g., "lunch", "dinner"
   dishType?: string[]; // e.g., "main course", "starter"
+  // Pantry match info (reverse matching)
+  matchInfo?: {
+    percentage: number;
+    matchedCount: number;
+    totalCount: number;
+    matchedIngredients: string[];
+    missingIngredients: string[];
+  };
   is_favorite: boolean;
   created_at: string;
 }
@@ -66,6 +74,8 @@ export interface RecipeIngredient {
   // Paid tier fields from Edamam
   weight?: number; // Weight in grams
   category?: string; // Food category
+  // Pantry match indicator
+  inPantry?: boolean; // Whether this ingredient is in user's pantry
 }
 
 export interface NutritionInfo {

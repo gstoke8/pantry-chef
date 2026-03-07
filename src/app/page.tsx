@@ -244,16 +244,18 @@ export default function RecipesPage() {
       if (!data.recipes || !Array.isArray(data.recipes) || data.recipes.length === 0) {
         console.log('No recipes returned from API. Data:', data);
         
-        // Check if we were using filters
-        const hasFilters = Object.values(searchFilters).some(v => v !== undefined);
-        const selectedForSearch = data.selectedIngredients || ingredientNames.slice(0, 8);
-        
-        if (hasFilters) {
-          setErrorMessage(`No recipes found with current filters. Try removing filters or using different ingredients.`);
+        // Show match statistics if available
+        if (data.matchStats) {
+          setErrorMessage(
+            `No recipes met the 50% pantry match threshold. ` +
+            `Found: ${data.matchStats['90%+']} with 90%+ match, ` +
+            `${data.matchStats['70-89%']} with 70-89% match, ` +
+            `${data.matchStats['50-69%']} with 50-69% match. ` +
+            `Try lowering the match threshold or adding more ingredients.`
+          );
         } else {
           setErrorMessage(
-            `No recipes found using: ${selectedForSearch.join(', ')}. ` +
-            `Try adding more common ingredients like chicken, rice, pasta, or eggs.`
+            `No recipes found. Try adding more common ingredients like chicken, rice, pasta, or eggs.`
           );
         }
         
@@ -266,7 +268,7 @@ export default function RecipesPage() {
       
       console.log('API returned recipes:', { count: data.recipes?.length, data: data });
       
-      // Convert API recipes to our Recipe format with paid tier fields
+      // Convert API recipes to our Recipe format with pantry match info
       const convertedRecipes: Recipe[] = data.recipes.map((recipe: any) => ({
         id: recipe.id,
         user_id: null,
@@ -290,6 +292,8 @@ export default function RecipesPage() {
         cuisineType: recipe.cuisineType,
         mealType: recipe.mealType,
         dishType: recipe.dishType,
+        // Pantry match info
+        matchInfo: recipe.matchInfo,
         is_favorite: false,
         created_at: new Date().toISOString(),
       }));
@@ -510,6 +514,16 @@ export default function RecipesPage() {
                     >
                       <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${recipe.is_favorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                     </button>
+                    {/* Match Percentage Badge */}
+                    {recipe.matchInfo && (
+                      <div className={`absolute top-2 left-2 sm:top-3 sm:left-3 px-2 py-1 rounded-full text-xs font-bold ${
+                        recipe.matchInfo.percentage >= 80 ? 'bg-emerald-500 text-white' :
+                        recipe.matchInfo.percentage >= 60 ? 'bg-yellow-500 text-white' :
+                        'bg-orange-500 text-white'
+                      }`}>
+                        {recipe.matchInfo.percentage}% Match
+                      </div>
+                    )}
                   </div>
                   <div className="p-3 sm:p-4">
                     <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-sm sm:text-base">
@@ -637,28 +651,48 @@ export default function RecipesPage() {
               {/* Ingredients Section */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingredients</h3>
-                {/* Paid tier: Use ingredientLines if available for cleaner display */}
-                {selectedRecipe.ingredientLines && selectedRecipe.ingredientLines.length > 0 ? (
-                  <ul className="space-y-2">
-                    {selectedRecipe.ingredientLines.map((line, idx) => (
-                      <li key={idx} className="flex items-start text-sm text-gray-700">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                        <span>{line}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <ul className="space-y-2">
-                    {selectedRecipe.ingredients.map((ing, idx) => (
-                      <li key={idx} className="flex items-start text-sm text-gray-700">
-                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mt-1.5 mr-2 flex-shrink-0"></span>
-                        <span>
-                          {ing.original || `${ing.amount} ${ing.unit} ${ing.name}`}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                {/* Pantry Match Info */}
+                {selectedRecipe.matchInfo && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Pantry Match</span>
+                      <span className={`text-sm font-bold ${
+                        selectedRecipe.matchInfo.percentage >= 80 ? 'text-emerald-600' :
+                        selectedRecipe.matchInfo.percentage >= 60 ? 'text-yellow-600' :
+                        'text-orange-600'
+                      }`}>
+                        {selectedRecipe.matchInfo.percentage}% ({selectedRecipe.matchInfo.matchedCount}/{selectedRecipe.matchInfo.totalCount} ingredients)
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          selectedRecipe.matchInfo.percentage >= 80 ? 'bg-emerald-500' :
+                          selectedRecipe.matchInfo.percentage >= 60 ? 'bg-yellow-500' :
+                          'bg-orange-500'
+                        }`}
+                        style={{ width: `${selectedRecipe.matchInfo.percentage}%` }}
+                      ></div>
+                    </div>
+                  </div>
                 )}
+
+                {/* Ingredients with pantry indicators */}
+                <ul className="space-y-2">
+                  {selectedRecipe.ingredients.map((ing, idx) => (
+                    <li key={idx} className="flex items-start text-sm">
+                      <span className={`w-1.5 h-1.5 rounded-full mt-1.5 mr-2 flex-shrink-0 ${
+                        ing.inPantry ? 'bg-emerald-500' : 'bg-red-400'
+                      }`}></span>
+                      <span className={ing.inPantry ? 'text-gray-700' : 'text-gray-500'}>
+                        {ing.original || `${ing.amount} ${ing.unit} ${ing.name}`}
+                        {!ing.inPantry && (
+                          <span className="ml-2 text-xs text-red-500 font-medium">(need to buy)</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               {/* Instructions Notice */}
