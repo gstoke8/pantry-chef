@@ -8,6 +8,10 @@ const HIGH_PRIORITY_KEYWORDS = [
   'chicken', 'beef', 'pork', 'fish', 'salmon', 'tuna', 'shrimp', 'tofu', 'eggs',
   // Starches
   'rice', 'pasta', 'noodles', 'potato', 'bread', 'quinoa', 'couscous',
+  // Produce (vegetables and fruits)
+  'tomato', 'onion', 'garlic', 'pepper', 'carrot', 'broccoli', 'spinach', 'lettuce',
+  'mushroom', 'zucchini', 'cucumber', 'celery', 'corn', 'beans', 'apple', 'banana',
+  'lemon', 'lime', 'orange', 'berry', 'strawberry', 'blueberry', 'avocado',
 ];
 
 // Get pantry items for reverse matching
@@ -74,15 +78,16 @@ function calculateMatchPercentage(
   return { percentage, matched, missing };
 }
 
-// Build broad search query from pantry (just proteins and starches)
+// Build broad search query from pantry (proteins, starches, and produce)
 function buildSearchQuery(pantryItems: string[]): string {
-  const proteinsAndStarches = pantryItems.filter(item => {
+  const prioritizedItems = pantryItems.filter(item => {
     const lower = item.toLowerCase();
     return HIGH_PRIORITY_KEYWORDS.some(keyword => lower.includes(keyword));
   });
   
-  // Take top 3-4 for broader search
-  return proteinsAndStarches.slice(0, 4).join(' ') || 'dinner';
+  // Take top 5-6 items for broader, more diverse search
+  // Include proteins first, then starches, then produce
+  return prioritizedItems.slice(0, 6).join(' ') || 'dinner';
 }
 
 export async function GET(request: NextRequest) {
