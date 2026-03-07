@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const ingredients = searchParams.get('ingredients');
   const number = searchParams.get('number') || '20';
-  const minMatchPercentage = parseInt(searchParams.get('minMatch') || '50');
+  const minMatchPercentage = parseInt(searchParams.get('minMatch') || '30');
   
   // Get env vars at request time (not module load)
   const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || '';
