@@ -80,14 +80,28 @@ function calculateMatchPercentage(
 
 // Build broad search query from pantry (proteins, starches, and produce)
 function buildSearchQuery(pantryItems: string[]): string {
-  const prioritizedItems = pantryItems.filter(item => {
+  // Map specific items to broader base terms for better search results
+  const broadenedItems = pantryItems.map(item => {
+    const lower = item.toLowerCase();
+    // Simplify specific items to base ingredients
+    if (lower.includes('chicken')) return 'chicken';
+    if (lower.includes('beef')) return 'beef';
+    if (lower.includes('pork')) return 'pork';
+    if (lower.includes('egg')) return 'eggs';
+    if (lower.includes('broth') || lower.includes('stock')) return null; // Skip broths/stocks
+    if (lower.includes('breadcrumbs') || lower.includes('panko')) return null; // Skip breadcrumbs
+    return item;
+  }).filter((item): item is string => item !== null);
+  
+  const prioritizedItems = broadenedItems.filter(item => {
     const lower = item.toLowerCase();
     return HIGH_PRIORITY_KEYWORDS.some(keyword => lower.includes(keyword));
   });
   
-  // Take top 5-6 items for broader, more diverse search
-  // Include proteins first, then starches, then produce
-  return prioritizedItems.slice(0, 6).join(' ') || 'dinner';
+  // Take top 4-5 items for broader, more diverse search
+  // Use unique values only
+  const uniqueItems = [...new Set(prioritizedItems)];
+  return uniqueItems.slice(0, 5).join(' ') || 'dinner';
 }
 
 export async function GET(request: NextRequest) {
