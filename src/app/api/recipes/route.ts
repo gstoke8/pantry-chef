@@ -107,7 +107,6 @@ function buildSearchQuery(pantryItems: string[]): string {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const ingredients = searchParams.get('ingredients');
-  const number = searchParams.get('number') || '20';
   const minMatchPercentage = parseInt(searchParams.get('minMatch') || '30');
   
   // Get env vars at request time (not module load)
@@ -155,8 +154,8 @@ export async function GET(request: NextRequest) {
     console.log('Pantry items:', pantryItems.length);
     console.log('Search query:', searchQuery);
     
-    // Request more recipes to filter down
-    const requestedCount = Math.min(parseInt(number) || 20, 100);
+    // Request more recipes - paid tier supports up to 100
+    const requestedCount = Math.min(parseInt(number) || 50, 100);
     
     const params = new URLSearchParams({
       type: 'public',
