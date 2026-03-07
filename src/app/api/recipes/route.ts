@@ -80,28 +80,33 @@ function calculateMatchPercentage(
 
 // Build broad search query from pantry (proteins, starches, and produce)
 function buildSearchQuery(pantryItems: string[]): string {
-  // Map specific items to broader base terms for better search results
-  const broadenedItems = pantryItems.map(item => {
+  // Option A: Super broad - just use 1-2 main proteins for wide database sampling
+  const proteins = pantryItems.filter(item => {
     const lower = item.toLowerCase();
-    // Simplify specific items to base ingredients
+    return ['chicken', 'beef', 'pork', 'fish', 'tofu', 'eggs'].some(p => lower.includes(p));
+  });
+  
+  // Just use 1-2 main proteins for a BROAD search that samples more of the database
+  const mainProteins = proteins.slice(0, 2).map(p => {
+    const lower = p.toLowerCase();
     if (lower.includes('chicken')) return 'chicken';
     if (lower.includes('beef')) return 'beef';
     if (lower.includes('pork')) return 'pork';
+    if (lower.includes('fish') || lower.includes('salmon')) return 'fish';
     if (lower.includes('egg')) return 'eggs';
-    if (lower.includes('broth') || lower.includes('stock')) return null; // Skip broths/stocks
-    if (lower.includes('breadcrumbs') || lower.includes('panko')) return null; // Skip breadcrumbs
-    return item;
-  }).filter((item): item is string => item !== null);
-  
-  const prioritizedItems = broadenedItems.filter(item => {
-    const lower = item.toLowerCase();
-    return HIGH_PRIORITY_KEYWORDS.some(keyword => lower.includes(keyword));
+    return p;
   });
   
-  // Take top 4-5 items for broader, more diverse search
-  // Use unique values only
-  const uniqueItems = [...new Set(prioritizedItems)];
-  return uniqueItems.slice(0, 5).join(' ') || 'dinner';
+  // Remove duplicates and take just 1-2 for broadest search
+  const unique = [...new Set(mainProteins)];
+  
+  // If we have proteins, use them. Otherwise fall back to generic terms
+  if (unique.length > 0) {
+    return unique.slice(0, 2).join(' '); // Just "chicken" or "chicken beef"
+  }
+  
+  // Fallback: search by meal type for maximum variety
+  return 'dinner';
 }
 
 export async function GET(request: NextRequest) {
@@ -110,8 +115,9 @@ export async function GET(request: NextRequest) {
   const minMatchPercentage = parseInt(searchParams.get('minMatch') || '30');
   
   // Get env vars at request time (not module load)
-  const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || '';
-  const EDAMAM_APP_KEY = process.env.NEXT_PUBLIC_EDAMAM_APP_KEY || '';
+  // Fallback to hardcoded values if env vars not set (for testing)
+  const EDAMAM_APP_ID = process.env.NEXT_PUBLIC_EDAMAM_APP_ID || 'a54e6f05';
+  const EDAMAM_APP_KEY = process.env.NEXT_PUBLIC_EDAMAM_APP_KEY || '64438d791ca8ab340d51069ce5b65def';
 
   console.log('API Request received:', { 
     ingredients: ingredients?.substring(0, 50),
