@@ -221,8 +221,15 @@ export default function RecipesPage() {
       console.log('Calling API:', apiUrl);
       const response = await fetch(apiUrl);
       
-      const data = await response.json();
-      console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error, query: data.query, selectedIngredients: data.selectedIngredients });
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await response.text();
+        console.error('JSON parse error. Response text:', text.substring(0, 500));
+        throw new Error(`API returned invalid JSON. Status: ${response.status}. Response: ${text.substring(0, 200)}`);
+      }
+      console.log('API response:', { status: response.status, recipes: data.recipes?.length, error: data.error, query: data.query });
       
       if (!response.ok) {
         console.error('API error:', data);
